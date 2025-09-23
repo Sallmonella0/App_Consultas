@@ -1,49 +1,24 @@
 import requests
+import base64
+import json
 
 class ConsultaAPI:
-    def __init__(self, url, token):
-        """
-        Inicializa a classe com a URL da API e o token de autenticação (Basic Auth codificado).
-        """
+    def __init__(self, url, user, password):
         self.url = url
-        self.token = token
-        self.headers = {
+        # Codifica user:password em Base64
+        credentials = f"{user}:{password}"
+        token_bytes = base64.b64encode(credentials.encode("utf-8"))
+        self.token = token_bytes.decode("utf-8")
+
+    def consultar(self, id_mensagem):
+        payload = json.dumps({"IDMENSAGEM": id_mensagem})
+        headers = {
             "Content-Type": "application/json",
             "Authorization": f"Basic {self.token}"
         }
-
-    def consultar(self, id_msg=0, filtro_coluna=None, filtro_valor=None):
-        """
-        Consulta a API.
-
-        id_msg: int -> IDMENSAGEM para filtrar a consulta (0 retorna todos)
-        filtro_coluna: str -> Nome da coluna para filtro opcional
-        filtro_valor: str -> Valor do filtro opcional
-        """
-        payload = {"IDMENSAGEM": int(id_msg)}
-
-        # Adiciona filtro somente se informado
-        if filtro_coluna and filtro_valor and filtro_valor.strip() != "":
-            payload["FILTRO"] = {filtro_coluna: filtro_valor.strip()}
-
         try:
-            response = requests.post(
-                self.url,
-                headers=self.headers,
-                json=payload,
-                timeout=10  # evita travamento
-            )
-            response.raise_for_status()  # levanta erro para códigos != 2xx
-            return response.json()  # retorna lista/dicionário
-        except requests.exceptions.HTTPError as errh:
-            print("HTTP Error:", errh)
-            return []
-        except requests.exceptions.ConnectionError as errc:
-            print("Connection Error:", errc)
-            return []
-        except requests.exceptions.Timeout as errt:
-            print("Timeout Error:", errt)
-            return []
-        except requests.exceptions.RequestException as err:
-            print("Erro inesperado:", err)
-            return []
+            response = requests.post(self.url, headers=headers, data=payload, timeout=10)
+            response.raise_for_status()  # Levanta erro para códigos >=400
+            return response.json()  # Retorna os dados já em formato dict/list
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Erro na API: {e}")

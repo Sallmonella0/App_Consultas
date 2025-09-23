@@ -1,55 +1,81 @@
-from tkinter import ttk
+# tabela.py
+import customtkinter as ctk
+from tkinter import ttk, messagebox
 
-class Tabela(ttk.Treeview):
-    def __init__(self, parent, colunas, **kwargs):
-        super().__init__(parent, columns=colunas, show="headings")
+class Tabela:
+    def __init__(self, parent, colunas, bg="#111111", fg="#D0F0C0",
+                 alt_bg="#1C1C1C", selected_bg="#66FF66", selected_fg="#111111"):
+        self.parent = parent
         self.colunas = colunas
+        self.bg = bg
+        self.fg = fg
+        self.alt_bg = alt_bg
+        self.selected_bg = selected_bg
+        self.selected_fg = selected_fg
 
-        # ===== Cabeçalho =====
+        # Dados originais da tabela
+        self.dados_master = []
+
+        # Treeview
         style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Treeview.Heading",
-                        background="#33CC33",  # verde claro
-                        foreground="#111111",
-                        font=("Arial", 11, "bold"))
+        style.theme_use("default")
         style.configure("Treeview",
-                        background="#1C1C1C",   # fundo geral
-                        foreground="#D0F0C0",   # texto
-                        fieldbackground="#1C1C1C",
+                        background=self.bg,
+                        foreground=self.fg,
+                        fieldbackground=self.bg,
                         rowheight=25)
-        style.map('Treeview', background=[('selected', '#66FF66')], foreground=[('selected', '#111111')])
+        style.map("Treeview",
+                  background=[('selected', self.selected_bg)],
+                  foreground=[('selected', self.selected_fg)])
 
-        # ===== Colunas =====
-        for col in colunas:
-            self.heading(col, text=col)
-            self.column(col, width=120, anchor="center")
+        self.tree = ttk.Treeview(parent, columns=self.colunas, show="headings")
+        for col in self.colunas:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=100, anchor="center")
 
-        # ===== Dados =====
-        self.dados_completos = []
-        self.dados_restantes = []
-        self.bloco = 50  # linhas por bloco
+        self.tree.pack(fill="both", expand=True)
 
-        # ===== Alternância de cores nas linhas =====
-        self.tag_configure('oddrow', background="#1C1C1C")   # cinza escuro
-        self.tag_configure('evenrow', background="#222222")  # cinza médio
+        # Configura cores alternadas
+        self.tree.tag_configure("oddrow", background=self.bg)
+        self.tree.tag_configure("evenrow", background=self.alt_bg)
 
     def atualizar(self, dados):
-        """Atualiza a tabela em blocos."""
-        self.delete(*self.get_children())
-        self.dados_completos = dados
-        self.dados_restantes = list(dados)
-        self._inserir_bloco()
-
-    def _inserir_bloco(self):
-        for _ in range(min(self.bloco, len(self.dados_restantes))):
-            item = self.dados_restantes.pop(0)
-            index = len(self.get_children())
-            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
-            self.insert("", "end", values=[item.get(col, "") for col in self.colunas], tags=(tag,))
-        if self.dados_restantes:
-            self.after(10, self._inserir_bloco)
+        """Atualiza a tabela com novos dados."""
+        if dados is None:
+            return
+        self.dados_master = dados.copy() if isinstance(dados, list) else []
+        self._carregar_tabela(self.dados_master)
 
     def filtrar(self, termo, coluna):
-        termo = termo.lower()
-        filtrados = [item for item in self.dados_completos if termo in str(item.get(coluna, "")).lower()]
-        self.atualizar(filtrados)
+        """Filtra os dados de acordo com o termo e coluna."""
+        if not termo:
+            # Se termo vazio, mostra todos os dados
+            self._carregar_tabela(self.dados_master)
+            return
+
+        termo = str(termo).lower()
+        resultados = []
+
+        for row in self.dados_master:
+            valor = str(row.get(coluna, "")).lower()
+            if termo in valor:
+                resultados.append(row)
+
+        if resultados:
+            self._carregar_tabela(resultados)
+        else:
+            # Nenhum resultado encontrado
+            self._carregar_tabela([])
+            messagebox.showinfo("Filtro", "Nenhum dado encontrado.")
+
+    def _carregar_tabela(self, dados):
+        """Carrega uma lista de dicionários na Treeview."""
+        # Limpa tabela
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # Insere dados
+        for i, row in enumerate(dados):
+            valores = [row.get(col, "") for col in self.colunas]
+            tag = "evenrow" if i % 2 == 0 else "oddrow"
+            self.tree.insert("", "end", values=valores, tags=(tag,))
