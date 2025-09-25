@@ -22,3 +22,14 @@ class ConsultaAPI:
             return response.json()  # Retorna os dados já em formato dict/list
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Erro na API: {e}")
+        
+    
+    def buscar_todos(self):
+        """Retorna todos os registros da API"""
+        try:
+            response = requests.get(f"{self.base_url}/todos")  # ajuste para sua rota real
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Erro ao buscar todos os dados: {e}")
+            return []  # retorna lista vazia se der erro

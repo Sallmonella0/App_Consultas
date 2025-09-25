@@ -1,4 +1,4 @@
-from app_gui_ctk import AppGUI
+from app_gui_ctk import App
 from api import ConsultaAPI
 
 URL_API = "http://85.209.93.16/api/data"

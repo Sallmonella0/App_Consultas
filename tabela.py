@@ -1,81 +1,71 @@
-# tabela.py
 import customtkinter as ctk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
-class Tabela:
-    def __init__(self, parent, colunas, bg="#111111", fg="#D0F0C0",
-                 alt_bg="#1C1C1C", selected_bg="#66FF66", selected_fg="#111111"):
-        self.parent = parent
+class Tabela(ctk.CTkFrame):
+    def __init__(self, master, colunas, **kwargs):
+        super().__init__(master, **kwargs)
+
         self.colunas = colunas
-        self.bg = bg
-        self.fg = fg
-        self.alt_bg = alt_bg
-        self.selected_bg = selected_bg
-        self.selected_fg = selected_fg
+        self.dados_originais = []  # sempre guarda os dados completos da API
 
-        # Dados originais da tabela
-        self.dados_master = []
+        # Entrada de filtro
+        self.filtro_var = ctk.StringVar()
+        filtro_frame = ctk.CTkFrame(self)
+        filtro_frame.pack(fill="x", pady=5)
 
-        # Treeview
-        style = ttk.Style()
-        style.theme_use("default")
-        style.configure("Treeview",
-                        background=self.bg,
-                        foreground=self.fg,
-                        fieldbackground=self.bg,
-                        rowheight=25)
-        style.map("Treeview",
-                  background=[('selected', self.selected_bg)],
-                  foreground=[('selected', self.selected_fg)])
+        ctk.CTkLabel(filtro_frame, text="Filtro:").pack(side="left", padx=5)
+        filtro_entry = ctk.CTkEntry(filtro_frame, textvariable=self.filtro_var)
+        filtro_entry.pack(side="left", fill="x", expand=True, padx=5)
+        filtro_entry.bind("<KeyRelease>", self._aplicar_filtro)
 
-        self.tree = ttk.Treeview(parent, columns=self.colunas, show="headings")
+        # Frame da tabela
+        tabela_frame = ctk.CTkFrame(self)
+        tabela_frame.pack(fill="both", expand=True)
+
+        # Treeview (sem scrollbar horizontal)
+        self.tree = ttk.Treeview(
+            tabela_frame,
+            columns=self.colunas,
+            show="headings",
+            selectmode="browse",
+            height=15
+        )
+
         for col in self.colunas:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=100, anchor="center")
+            self.tree.column(col, anchor="center", width=120)
 
-        self.tree.pack(fill="both", expand=True)
+        self.tree.pack(side="left", fill="both", expand=True)
 
-        # Configura cores alternadas
-        self.tree.tag_configure("oddrow", background=self.bg)
-        self.tree.tag_configure("evenrow", background=self.alt_bg)
+        # Scrollbar vertical (ao lado)
+        scrollbar = ttk.Scrollbar(
+            tabela_frame,
+            orient="vertical",
+            command=self.tree.yview
+        )
+        scrollbar.pack(side="right", fill="y")
+        self.tree.configure(yscrollcommand=scrollbar.set)
 
     def atualizar(self, dados):
-        """Atualiza a tabela com novos dados."""
-        if dados is None:
-            return
-        self.dados_master = dados.copy() if isinstance(dados, list) else []
-        self._carregar_tabela(self.dados_master)
+        """Atualiza a tabela com novos dados"""
+        self.dados_originais = dados  # guarda todos os dados recebidos
+        self._popular_tabela(dados)
 
-    def filtrar(self, termo, coluna):
-        """Filtra os dados de acordo com o termo e coluna."""
-        if not termo:
-            # Se termo vazio, mostra todos os dados
-            self._carregar_tabela(self.dados_master)
-            return
+    def _popular_tabela(self, dados):
+        """Preenche a Treeview"""
+        self.tree.delete(*self.tree.get_children())
+        for linha in dados:
+            valores = [linha.get(col, "") for col in self.colunas]
+            self.tree.insert("", "end", values=valores)
 
-        termo = str(termo).lower()
-        resultados = []
-
-        for row in self.dados_master:
-            valor = str(row.get(coluna, "")).lower()
-            if termo in valor:
-                resultados.append(row)
-
-        if resultados:
-            self._carregar_tabela(resultados)
+    def _aplicar_filtro(self, event=None):
+        """Aplica filtro sempre sobre os dados originais"""
+        texto = self.filtro_var.get().lower()
+        if not texto:
+            dados_filtrados = self.dados_originais
         else:
-            # Nenhum resultado encontrado
-            self._carregar_tabela([])
-            messagebox.showinfo("Filtro", "Nenhum dado encontrado.")
-
-    def _carregar_tabela(self, dados):
-        """Carrega uma lista de dicionários na Treeview."""
-        # Limpa tabela
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-
-        # Insere dados
-        for i, row in enumerate(dados):
-            valores = [row.get(col, "") for col in self.colunas]
-            tag = "evenrow" if i % 2 == 0 else "oddrow"
-            self.tree.insert("", "end", values=valores, tags=(tag,))
+            dados_filtrados = [
+                item for item in self.dados_originais
+                if any(texto in str(valor).lower() for valor in item.values())
+            ]
+        self._popular_tabela(dados_filtrados)
