@@ -1,0 +1,20 @@
+# Ignorar pastas de cache do Python
+__pycache__/
+*.pyc
+
+# Ignorar ficheiros de cache e logs da aplicação
+cache.db
+app.log
+
+# Ignorar ficheiros de configuração de IDEs (ex: VSCode)
+.vscode/
+.idea/
+
+# Ignorar pastas geradas pelo PyInstaller (para criar o .exe)
+build/
+dist/
+*.spec
+
+# Ignorar ficheiros do ambiente virtual (se usar um)
+venv/
+.venv/

@@ -1,3 +1,0 @@
-# config.py
-
-COLUNAS = ["DATAHORA", "IDMENSAGEM", "LATITUDE", "LONGITUDE", "PLACA", "TrackID"]
