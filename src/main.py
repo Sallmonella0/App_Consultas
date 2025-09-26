@@ -1,5 +1,7 @@
 # src/main.py
 import logging
+from dotenv import load_dotenv # NOVO: Para carregar variáveis de ambiente
+import os # NOVO: Para acessar variáveis de ambiente
 
 # --- IMPORTAÇÕES CORRIGIDAS ---
 from src.gui.app_gui_ctk import AppGUI
@@ -10,11 +12,17 @@ from src.utils import logger_config
 logger_config.setup_logging()
 logging.info("Aplicação iniciada.")
 
-URL_API = "http://85.209.93.16/api/data"
-USER = "vip"
-PASSWORD = "83114d8fc3164de4e85b4e6ee8a04bbd"
+# --- CORREÇÃO DE SEGURANÇA: Carregar variáveis de ambiente do .env ---
+load_dotenv()
+URL_API = os.getenv("API_URL")
+USER = os.getenv("API_USER")
+PASSWORD = os.getenv("API_PASSWORD")
 
 if __name__ == "__main__":
+    if not all([URL_API, USER, PASSWORD]):
+        logging.error("Credenciais da API não encontradas. Certifique-se de que o arquivo .env está configurado corretamente.")
+        # Em uma aplicação real, você pode querer adicionar uma mensagem de erro na tela antes de encerrar.
+    
     api = ConsultaAPI(URL_API, USER, PASSWORD)
     app = AppGUI(api)
     app.mainloop()

@@ -3,9 +3,8 @@ import requests
 import json
 import logging
 # --- IMPORTAÇÃO CORRIGIDA ---
-from src.core import cache
+from src.core.cache import CacheManager # Alterado para importar a classe
 
-# ... (o resto do ficheiro permanece o mesmo)
 def sanitizar_dados(data):
     if not isinstance(data, list): return []
     dados_limpos = []
@@ -20,7 +19,10 @@ class ConsultaAPI:
         self.base_url = url
         self.auth = (user, password)
         self.headers = {'Content-Type': 'application/json'}
+        # --- NOVO: Instanciar CacheManager ---
+        self.cache_manager = CacheManager() 
         logging.info("Instância de ConsultaAPI criada.")
+        
     def _fazer_requisicao(self, payload):
         try:
             response = requests.post(self.base_url, auth=self.auth, json=payload, timeout=15)
@@ -31,18 +33,29 @@ class ConsultaAPI:
         except requests.exceptions.RequestException as e:
             logging.error(f"Falha na comunicação com a API: {e}")
             raise Exception(f"Erro de comunicação com a API: {e}")
+            
     def buscar_todos(self, force_refresh=False):
         if not force_refresh:
-            cached_data = cache.get_cached_data()
+            # --- CORREÇÃO: Usar o método da instância da classe CacheManager ---
+            cached_data = self.cache_manager.get_cached_data() 
             if cached_data:
                 return sanitizar_dados(cached_data)
+        
         logging.info("Buscando dados frescos da API...")
         payload = {"IDMENSAGEM": 0}
         fresh_data = self._fazer_requisicao(payload)
+        
         if fresh_data:
-            cache.set_cached_data(fresh_data)
+            # --- CORREÇÃO: Usar o método da instância da classe CacheManager ---
+            self.cache_manager.set_cached_data(fresh_data)
+            
         return fresh_data
+        
     def consultar(self, id_mensagem):
+        if not id_mensagem or not id_mensagem.isdigit(): return []
+        logging.info(f"Consultando API pelo IDMENSAGEM: {id_mensagem}")
+        payload = {"IDMENSAGEM": int(id_mensagem)}
+        return self._fazer_requisicao(payload)
         if not id_mensagem or not id_mensagem.isdigit(): return []
         logging.info(f"Consultando API pelo IDMENSAGEM: {id_mensagem}")
         payload = {"IDMENSAGEM": int(id_mensagem)}

@@ -1,18 +1,29 @@
-# Ficheiros e pastas de cache/log da aplicação
-cache.db
-app.log
-app_state.json
+# .gitignore aprimorado
+# Excluir variáveis de ambiente e arquivos de configuração sensíveis
+.env
+settings.ini
 
-# Pastas de cache do Python
+# Excluir banco de dados de cache
+cache.db
+*.sqlite
+
+# Excluir arquivos de pacotes Python
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
 
-# Pastas de compilação do PyInstaller
-build/
+# Excluir arquivos do PyInstaller/Build
 dist/
+build/
 *.spec
 
-# Configuração de IDEs
-.vs/
+# Excluir logs
+*.log
+
+# Excluir arquivos do IDE (ex: VS Code)
 .vscode/
-.idea/
+
+# Excluir arquivos do sistema
+.DS_Store

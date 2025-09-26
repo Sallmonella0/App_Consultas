@@ -119,7 +119,7 @@ class AppGUI(ctk.CTk):
         self.frame_paginacao = ctk.CTkFrame(self.frame_bottom, fg_color="transparent")
         self.frame_paginacao.pack(side="left", expand=True, fill="x")
 
-        # NOVO: Botão para ir para a primeira página
+        # Botão para ir para a primeira página
         self.btn_primeira = ctk.CTkButton(self.frame_paginacao, text="<< Primeira", width=100, command=self.primeira_pagina)
         self.btn_primeira.pack(side="left", padx=(0, 5))
 
@@ -130,7 +130,7 @@ class AppGUI(ctk.CTk):
         self.btn_proximo = ctk.CTkButton(self.frame_paginacao, text="Próximo >", width=100, command=self.proxima_pagina)
         self.btn_proximo.pack(side="left", padx=5)
 
-        # NOVO: Botão para ir para a última página
+        # Botão para ir para a última página
         self.btn_ultima = ctk.CTkButton(self.frame_paginacao, text="Última >>", width=100, command=self.ultima_pagina)
         self.btn_ultima.pack(side="left", padx=5)
 
@@ -150,7 +150,7 @@ class AppGUI(ctk.CTk):
         self.widgets_interativos = [
             self.entry_filtro, self.combo_coluna, self.btn_limpar_filtro,
             self.entry_data_inicio, self.entry_data_fim,
-            self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, # NOVO: Adicionados à lista
+            self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, 
             self.btn_excel, self.btn_csv
         ]
     
@@ -195,15 +195,21 @@ class AppGUI(ctk.CTk):
             else:
                 dados_filtrados = [item for item in dados_filtrados if termo in str(item.get(coluna, "")).lower()]
         
+        # --- CORREÇÃO: Validação de Data mais robusta com feedback para a UI ---
         try:
+            data_filter_error = False
+            
             if data_inicio_str:
                 data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
                 dados_filtrados = [item for item in dados_filtrados if datetime.fromisoformat(item.get("DATAHORA", "").replace("T", " ")).date() >= data_inicio]
             if data_fim_str:
                 data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
                 dados_filtrados = [item for item in dados_filtrados if datetime.fromisoformat(item.get("DATAHORA", "").replace("T", " ")).date() <= data_fim]
-        except (ValueError, TypeError) as e:
-            logging.warning(f"Formato de data inválido para filtro: {e}")
+                
+        except (ValueError, TypeError):
+            data_filter_error = True
+            logging.warning(f"Formato de data inválido ('{data_inicio_str}' ou '{data_fim_str}'). Ignorando filtro de data.")
+        # --- FIM DA CORREÇÃO ---
 
         if thread_id != self.current_render_thread:
             return
@@ -212,6 +218,10 @@ class AppGUI(ctk.CTk):
         
         if thread_id == self.current_render_thread:
             self.render_queue.put(dados_ordenados)
+            # --- CORREÇÃO: Enviar erro para a UI se houver falha na data ---
+            if data_filter_error:
+                # Usa self.after para garantir que a atualização da UI ocorra na thread principal
+                self.after(0, lambda: self.update_status("ERRO: Formato de data inválido (Use AAAA-MM-DD).", clear_after_ms=5000))
 
     def renderizar_dados(self):
         self.configure(cursor="watch")
@@ -269,7 +279,7 @@ class AppGUI(ctk.CTk):
         self.tabela.atualizar_tabela(dados_da_pagina)
         self.atualizar_label_pagina()
     
-    # --- NOVO: Funções de navegação para primeira/última página ---
+    # Funções de navegação para primeira/última página
     def primeira_pagina(self):
         self.ir_para_pagina(1)
 
@@ -287,7 +297,6 @@ class AppGUI(ctk.CTk):
         total_paginas = math.ceil(len(self.dados_exibidos) / ITENS_POR_PAGINA) if self.dados_exibidos else 1
         self.label_pagina.configure(text=f"Página {self.pagina_atual} / {max(1, total_paginas)}")
 
-    # O resto do código permanece o mesmo
     def carregar_dados_iniciais_com_cache(self, is_auto_refresh=False):
         try:
             if not is_auto_refresh:
@@ -325,8 +334,10 @@ class AppGUI(ctk.CTk):
 
     def consultar_api(self):
         id_msg = self.entry_id.get().strip()
-        if not id_msg.isdigit():
-            self.after(0, lambda: messagebox.showwarning("Atenção", "IDMENSAGEM deve ser um número!"))
+        
+        # --- CORREÇÃO: Validação de ID mais robusta (checa se está vazio OU não é dígito) ---
+        if not id_msg or not id_msg.isdigit():
+            self.after(0, lambda: messagebox.showwarning("Atenção", "IDMENSAGEM deve ser um número inteiro e não pode estar vazio!"))
             return
             
         self.after(0, lambda: self.btn_consultar.configure(state="disabled", text="Buscando..."))
@@ -410,7 +421,7 @@ class AppGUI(ctk.CTk):
         
         botoes = [
             self.btn_consultar, self.btn_csv, self.btn_excel, self.btn_alternar_tema, 
-            self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, # NOVO: Adicionados à lista
+            self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, 
             self.btn_limpar_filtro
         ]
         entries = [self.entry_id, self.entry_filtro, self.entry_data_inicio, self.entry_data_fim]
