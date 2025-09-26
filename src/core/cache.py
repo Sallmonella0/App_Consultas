@@ -1,35 +1,27 @@
-# cache.py
+# src/core/cache.py
 import sqlite3
 import json
 from datetime import datetime, timedelta
 import logging
-from utils.settings_manager import CACHE_DURATION_MINUTES
+# --- IMPORTAÇÃO CORRIGIDA ---
+from src.utils.settings_manager import CACHE_DURATION_MINUTES
 
+# ... (o resto do ficheiro permanece o mesmo)
 CACHE_DB = 'cache.db'
-
 def init_db():
     with sqlite3.connect(CACHE_DB) as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS api_cache (
-                id INTEGER PRIMARY KEY,
-                data TEXT NOT NULL,
-                timestamp DATETIME NOT NULL
-            )
-        ''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS api_cache (id INTEGER PRIMARY KEY, data TEXT NOT NULL, timestamp DATETIME NOT NULL)''')
         conn.commit()
-
 def get_cached_data():
     try:
         with sqlite3.connect(CACHE_DB) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT data, timestamp FROM api_cache ORDER BY id DESC LIMIT 1")
             row = cursor.fetchone()
-
             if row:
                 data_json, timestamp_str = row
                 timestamp = datetime.fromisoformat(timestamp_str)
-                
                 if datetime.now() - timestamp < timedelta(minutes=CACHE_DURATION_MINUTES):
                     logging.info("Cache válido encontrado. A carregar dados do cache.")
                     return json.loads(data_json)
@@ -38,7 +30,6 @@ def get_cached_data():
     except (sqlite3.Error, json.JSONDecodeError) as e:
         logging.error(f"Erro ao ler o cache: {e}")
     return None
-
 def set_cached_data(data):
     try:
         with sqlite3.connect(CACHE_DB) as conn:
@@ -51,5 +42,4 @@ def set_cached_data(data):
             logging.info("Dados salvos no cache.")
     except sqlite3.Error as e:
         logging.error(f"Erro ao salvar no cache: {e}")
-
 init_db()
