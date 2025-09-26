@@ -2,7 +2,8 @@
 import requests
 import json
 import logging
-from src.core.cache import CacheManager # Alterado para importar a classe
+from src.core.cache import CacheManager 
+from src.core.exceptions import APIConnectionError, APIAuthError, APIClientError, APIServerError, APIResponseError, ConsultaAPIException # NOVO: Importa exceções customizadas
 
 def sanitizar_dados(data):
     if not isinstance(data, list): return []
@@ -36,13 +37,39 @@ class ConsultaAPI:
     def _fazer_requisicao(self, payload):
         try:
             response = requests.post(self.base_url, auth=self.auth, json=payload, timeout=15)
-            response.raise_for_status()
+            
+            # CORREÇÃO: Tratamento de exceções mais detalhado (Error 2)
+            if response.status_code == 401:
+                raise APIAuthError()
+            elif 400 <= response.status_code < 500:
+                # Trata 4xx (exceto 401)
+                raise APIClientError(response.status_code, response.text)
+            elif 500 <= response.status_code < 600:
+                # Trata 5xx
+                raise APIServerError(response.status_code, response.text)
+            
+            response.raise_for_status() # Levanta exceções para outros erros 4xx e 5xx
+
+            # Tenta converter para JSON
             dados_brutos = response.json()
+            if not isinstance(dados_brutos, list):
+                 raise APIResponseError("Resposta JSON inesperada. Esperava-se uma lista de registos.")
+                 
             dados_sanitizados = sanitizar_dados(dados_brutos)
             return dados_sanitizados
+        
+        except requests.exceptions.Timeout:
+            raise APIConnectionError("Timeout de requisição.")
+        except requests.exceptions.ConnectionError:
+            raise APIConnectionError("Falha de conexão com a API.")
         except requests.exceptions.RequestException as e:
+            # Captura outros erros de requisição
             logging.error(f"Falha na comunicação com a API: {e}")
-            raise Exception(f"Erro de comunicação com a API: {e}")
+            raise APIConnectionError(f"Erro de comunicação não especificado: {e}")
+        except json.JSONDecodeError:
+            raise APIResponseError("Resposta da API não é um JSON válido.")
+        except ConsultaAPIException:
+            raise # Lança as exceções customizadas já capturadas acima
             
     def buscar_todos(self, force_refresh=False):
         if not force_refresh:

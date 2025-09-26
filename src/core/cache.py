@@ -7,6 +7,7 @@ import logging
 from src.utils.settings_manager import CACHE_DURATION_MINUTES
 
 CACHE_DB = 'cache.db'
+CACHE_ID = 1 # Chave fixa para o cache de linha única
 
 class CacheManager:
     """Gerencia a leitura e escrita de dados de cache usando SQLite."""
@@ -20,6 +21,7 @@ class CacheManager:
         try:
             with sqlite3.connect(CACHE_DB) as conn:
                 cursor = conn.cursor()
+                # Adiciona CACHE_ID como chave primária
                 cursor.execute('''CREATE TABLE IF NOT EXISTS api_cache (
                                     id INTEGER PRIMARY KEY, 
                                     data TEXT NOT NULL, 
@@ -33,7 +35,8 @@ class CacheManager:
         try:
             with sqlite3.connect(CACHE_DB) as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT data, timestamp FROM api_cache ORDER BY id DESC LIMIT 1")
+                # Busca pelo ID fixo
+                cursor.execute("SELECT data, timestamp FROM api_cache WHERE id = ?", (CACHE_ID,))
                 row = cursor.fetchone()
                 
                 if row:
@@ -50,14 +53,19 @@ class CacheManager:
         return None
 
     def set_cached_data(self, data):
-        """Salva os dados no cache, limpando entradas anteriores."""
+        """Salva os dados no cache usando INSERT OR REPLACE para upsert atômico."""
         try:
             with sqlite3.connect(CACHE_DB) as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM api_cache") # Limpa o cache antigo
                 data_json = json.dumps(data)
                 timestamp = datetime.now().isoformat()
-                cursor.execute("INSERT INTO api_cache (data, timestamp) VALUES (?, ?)", (data_json, timestamp))
+                
+                # CORREÇÃO: Usar INSERT OR REPLACE INTO para upsert atômico (Error 4)
+                cursor.execute("""
+                    INSERT OR REPLACE INTO api_cache (id, data, timestamp) 
+                    VALUES (?, ?, ?)
+                    """, (CACHE_ID, data_json, timestamp))
+                
                 conn.commit()
                 logging.info("Dados salvos no cache.")
         except sqlite3.Error as e:

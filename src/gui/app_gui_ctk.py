@@ -3,9 +3,14 @@ import customtkinter as ctk
 from tkinter import messagebox
 import threading
 import logging
-from datetime import datetime, timedelta # timedelta é necessário para a correção do filtro de data
+from datetime import datetime, timedelta 
 import math
 from queue import Queue
+
+# --- NOVAS IMPORTAÇÕES ---
+from src.core.data_controller import DataController # Importa o Controller
+from src.core.exceptions import ConsultaAPIException, APIAuthError # Importa exceções
+# -------------------------
 
 from src.gui.tabela import Tabela, chave_de_ordenacao_segura
 from src.utils.exportar import Exportar
@@ -24,16 +29,15 @@ class AppGUI(ctk.CTk):
         super().__init__()
         self.api = api
         
-        # --- Gestão de Estado ---
+        # --- Gestão de Estado e Controller ---
         self.app_state = load_state()
         self.tema_atual = self.app_state.get("theme", "dark_green")
         self._debounce_id = None
-        self.dados_completos = []
-        self.dados_exibidos = []
         self.pagina_atual = 1
-        self.coluna_ordenacao = "DATAHORA"
-        self.ordem_desc = True
         self.is_fullscreen = False
+        
+        # NOVO: Instancia o DataController e remove a gestão de dados da GUI
+        self.controller = DataController(COLUNAS) 
         
         # --- Controlo de Threads de Filtragem ---
         self.render_queue = Queue()
@@ -52,6 +56,12 @@ class AppGUI(ctk.CTk):
         
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.gerir_estado_widgets(False)
+        
+        # NOVO: Configura o estado inicial do controller (com base no estado persistente)
+        self.controller.coluna_ordenacao = self.app_state.get("coluna_ordenacao", "DATAHORA")
+        self.controller.ordem_desc = self.app_state.get("ordem_desc", True)
+        self.pagina_atual = self.app_state.get("pagina_atual", 1)
+        
         threading.Thread(target=self.carregar_dados_iniciais_com_cache, daemon=True).start()
         self.schedule_auto_refresh()
         
@@ -71,7 +81,6 @@ class AppGUI(ctk.CTk):
         self.entry_id.pack(side="left")
         self.entry_id.bind("<Return>", lambda e: self.consultar_api_async())
         
-        # CORREÇÃO: Envolver o comando em lambda para resolver AttributeError
         self.btn_consultar = ctk.CTkButton(self.frame_top, text="Consultar", width=100, command=lambda: self.consultar_api_async())
         self.btn_consultar.pack(side="left", padx=5)
 
@@ -116,7 +125,6 @@ class AppGUI(ctk.CTk):
         self.frame_table.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
         self.frame_table.grid_rowconfigure(0, weight=1)
         self.frame_table.grid_columnconfigure(0, weight=1)
-        # CORREÇÃO: Passa self.ordenar_por_coluna como callback para a Tabela (Desacoplamento)
         self.tabela = Tabela(self, COLUNAS, on_sort_command=self.ordenar_por_coluna)
         self.tabela.grid(in_=self.frame_table, row=0, column=0, sticky="nsew")
 
@@ -127,7 +135,6 @@ class AppGUI(ctk.CTk):
         self.frame_paginacao = ctk.CTkFrame(self.frame_bottom, fg_color="transparent")
         self.frame_paginacao.pack(side="left", expand=True, fill="x")
 
-        # Botão para ir para a primeira página
         self.btn_primeira = ctk.CTkButton(self.frame_paginacao, text="<< Primeira", width=100, command=self.primeira_pagina)
         self.btn_primeira.pack(side="left", padx=(0, 5))
 
@@ -138,7 +145,6 @@ class AppGUI(ctk.CTk):
         self.btn_proximo = ctk.CTkButton(self.frame_paginacao, text="Próximo >", width=100, command=self.proxima_pagina)
         self.btn_proximo.pack(side="left", padx=5)
 
-        # Botão para ir para a última página
         self.btn_ultima = ctk.CTkButton(self.frame_paginacao, text="Última >>", width=100, command=self.ultima_pagina)
         self.btn_ultima.pack(side="left", padx=5)
 
@@ -162,7 +168,7 @@ class AppGUI(ctk.CTk):
             self.btn_excel, self.btn_csv
         ]
     
-    # --- Funções de Tela Cheia ---
+    # --- Funções de Tela Cheia, _handle_date_validation, _reset_date_border (mantidas) ---
     def toggle_fullscreen(self, event=None):
         self.is_fullscreen = not self.is_fullscreen
         self.attributes("-fullscreen", self.is_fullscreen)
@@ -174,13 +180,11 @@ class AppGUI(ctk.CTk):
             self.attributes("-fullscreen", False)
             return "break"
 
-    # --- Lógica de Dados e UI (Otimizada) ---
     def _handle_date_validation(self):
         """Valida o formato das datas inseridas e fornece feedback visual."""
         data_inicio_str = self.entry_data_inicio.get()
         data_fim_str = self.entry_data_fim.get()
         cores = TEMAS[self.tema_atual]
-        
         is_valid = True
         
         # 1. Validação de Data Início
@@ -194,7 +198,7 @@ class AppGUI(ctk.CTk):
         # 2. Validação de Data Fim
         if data_fim_str and not is_valid_ui_date(data_fim_str):
             self.entry_data_fim.configure(border_color=cores["error_color"], border_width=2)
-            if is_valid: # Apenas atualiza o status se não houver outro erro de data
+            if is_valid: 
                 self.update_status("ERRO: Formato de data inválido (Use AAAA-MM-DD).", clear_after_ms=5000)
             is_valid = False
         else:
@@ -205,102 +209,54 @@ class AppGUI(ctk.CTk):
     def _reset_date_border(self, entry_widget):
         """Reseta a cor da borda de um widget de entrada de data."""
         cores = TEMAS[self.tema_atual]
-        # Restaura a cor de borda padrão e a largura
         entry_widget.configure(border_color=cores["button_hover"], border_width=1)
 
+    # --- Funções de Renderização e Filtro/Paginação (Delegadas ao Controller) ---
     def processar_fila_renderizacao(self):
         try:
-            dados_processados = self.render_queue.get_nowait()
-            self.dados_exibidos = dados_processados
+            # Obtém os dados processados e a página atual do Controller
+            data_page_num, dados_da_pagina = self.render_queue.get_nowait()
             
-            self.ir_para_pagina(self.pagina_atual)
-            self.update_status(f"{len(self.dados_exibidos)} registos encontrados.")
+            self.pagina_atual = data_page_num
+            total_registos = self.controller.total_registos 
+            
+            self.tabela.atualizar_tabela(dados_da_pagina)
+            self.atualizar_label_pagina()
+            self.update_status(f"{total_registos} registos encontrados.")
+            # Atualiza o indicador de ordenação com base no estado do Controller
+            self.tabela.atualizar_indicador_ordenacao(self.controller.coluna_ordenacao, self.controller.ordem_desc)
             self.configure(cursor="")
         except Exception:
             pass
         finally:
             self.after(100, self.processar_fila_renderizacao)
 
-    def renderizar_dados_thread(self, termo, coluna, data_inicio_str, data_fim_str, coluna_ord, ordem_desc, thread_id):
+    def renderizar_dados_thread(self, thread_id):
         if thread_id != self.current_render_thread:
             return
 
-        dados_filtrados = self.dados_completos
-        
-        if termo:
-            if coluna == "TODAS":
-                dados_filtrados = [
-                    item for item in dados_filtrados 
-                    if termo in ' '.join(map(str, item.values())).lower()
-                ]
-            else:
-                dados_filtrados = [item for item in dados_filtrados if termo in str(item.get(coluna, "")).lower()]
-        
-        # --- CORREÇÃO: Uso de utilitário de data e validação simplificada ---
-        data_filter_error = False
-        
         try:
-            # Converte as strings da UI para objetos date, se existirem e forem válidas
-            data_inicio_str = self.entry_data_inicio.get()
-            data_fim_str = self.entry_data_fim.get()
-
-            data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
+            # 1. Aplica o filtro e ordenação no Controller
+            self.controller.aplicar_filtro()
             
-            # CORREÇÃO: Ajusta data_fim para ser inclusiva (data_fim_exclusiva)
-            data_fim_exclusiva = None
-            if data_fim_str:
-                data_fim_date = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
-                data_fim_exclusiva = data_fim_date + timedelta(days=1) # O filtro agora usa o dia seguinte como limite superior exclusivo
+            # 2. Obtém os dados da página atual (já ordenados e filtrados)
+            page_num, dados_da_pagina = self.controller.get_dados_pagina(self.pagina_atual)
             
-            if data_inicio or data_fim_exclusiva:
-                def filter_date(item):
-                    # Usa a função utilitária para obter o objeto date
-                    item_date = parse_api_datetime_to_date(item.get("DATAHORA"))
-                    if not item_date:
-                        return False # Ignora itens sem DATAHORA válida
-                    
-                    if data_inicio and item_date < data_inicio:
-                        return False
-                    # CORREÇÃO: Compara com o dia seguinte, tornando o limite superior inclusivo
-                    if data_fim_exclusiva and item_date >= data_fim_exclusiva:
-                        return False
-                    return True
-
-                dados_filtrados = [item for item in dados_filtrados if filter_date(item)]
+            if thread_id == self.current_render_thread:
+                self.render_queue.put((page_num, dados_da_pagina))
                 
-        except (ValueError, TypeError):
-            # Deve ser apanhado pela pré-validação, mas mantido como fallback
-            data_filter_error = True
-            logging.warning(f"Formato de data inválido ('{data_inicio_str}' ou '{data_fim_str}'). Ignorando filtro de data.")
-        # --- FIM DA CORREÇÃO ---
-
-        if thread_id != self.current_render_thread:
-            return
-
-        dados_ordenados = sorted(dados_filtrados, key=lambda item: chave_de_ordenacao_segura(item, coluna_ord), reverse=ordem_desc)
-        
-        if thread_id == self.current_render_thread:
-            self.render_queue.put(dados_ordenados)
-            # Envia erro para a UI se houver falha na data
-            if data_filter_error:
-                self.after(0, lambda: self.update_status("ERRO: Formato de data inválido (Use AAAA-MM-DD).", clear_after_ms=5000))
+        except Exception as e:
+            logging.error(f"Erro na thread de renderização: {e}")
+            self.after(0, lambda: self.update_status("ERRO: Falha ao processar os dados.", clear_after_ms=5000))
+            self.after(0, lambda: self.configure(cursor=""))
 
     def renderizar_dados(self):
         self.configure(cursor="watch")
-        self.tabela.atualizar_indicador_ordenacao(self.coluna_ordenacao, self.ordem_desc)
         
         thread_id = threading.get_ident()
         self.current_render_thread = thread_id
 
-        args = (
-            self.entry_filtro.get().lower(),
-            self.combo_coluna.get(),
-            self.entry_data_inicio.get(),
-            self.entry_data_fim.get(),
-            self.coluna_ordenacao,
-            self.ordem_desc,
-            thread_id
-        )
+        args = (thread_id,)
         
         threading.Thread(target=self.renderizar_dados_thread, args=args, daemon=True).start()
 
@@ -308,13 +264,21 @@ class AppGUI(ctk.CTk):
         if self._debounce_id:
             self.after_cancel(self._debounce_id)
             
-        # NOVO: Se a validação de data falhar, impede a aplicação do filtro
         if not self._handle_date_validation():
             return
 
         self._debounce_id = self.after(300, self.aplicar_filtro)
 
     def aplicar_filtro(self):
+        
+        # 1. Define os novos parâmetros de filtro no Controller
+        try:
+            self.controller.set_filtro_texto(self.entry_filtro.get(), self.combo_coluna.get())
+            self.controller.set_filtro_data(self.entry_data_inicio.get(), self.entry_data_fim.get())
+        except ValueError:
+            return 
+
+        # 2. Reseta a página e aciona a renderização
         self.pagina_atual = 1
         self.renderizar_dados()
 
@@ -322,40 +286,31 @@ class AppGUI(ctk.CTk):
         self.entry_filtro.delete(0, 'end')
         self.entry_data_inicio.delete(0, 'end')
         self.entry_data_fim.delete(0, 'end')
-        # NOVO: Reseta o feedback visual
         self._reset_date_border(self.entry_data_inicio)
         self._reset_date_border(self.entry_data_fim)
         self.aplicar_filtro()
         
     def ordenar_por_coluna(self, coluna):
-        if self.coluna_ordenacao == coluna:
-            self.ordem_desc = not self.ordem_desc
-        else:
-            self.coluna_ordenacao = coluna
-            self.ordem_desc = True
+        # Delega a lógica de ordenação ao Controller
+        self.controller.ordenar(coluna)
+        # Reseta para a primeira página após a ordenação
+        self.pagina_atual = 1 
         self.renderizar_dados()
 
     def ir_para_pagina(self, numero_pagina):
-        total_paginas = math.ceil(len(self.dados_exibidos) / ITENS_POR_PAGINA) if self.dados_exibidos else 1
         
-        if numero_pagina < 1: numero_pagina = 1
-        if numero_pagina > total_paginas: numero_pagina = total_paginas
-        self.pagina_atual = numero_pagina
+        page_num, dados_da_pagina = self.controller.get_dados_pagina(numero_pagina)
         
-        inicio = (self.pagina_atual - 1) * ITENS_POR_PAGINA
-        fim = inicio + ITENS_POR_PAGINA
-        dados_da_pagina = self.dados_exibidos[inicio:fim]
+        self.pagina_atual = page_num
         
         self.tabela.atualizar_tabela(dados_da_pagina)
         self.atualizar_label_pagina()
     
-    # Funções de navegação para primeira/última página
     def primeira_pagina(self):
         self.ir_para_pagina(1)
 
     def ultima_pagina(self):
-        total_paginas = math.ceil(len(self.dados_exibidos) / ITENS_POR_PAGINA) if self.dados_exibidos else 1
-        self.ir_para_pagina(total_paginas)
+        self.ir_para_pagina(self.controller.total_paginas)
 
     def pagina_anterior(self):
         self.ir_para_pagina(self.pagina_atual - 1)
@@ -364,26 +319,31 @@ class AppGUI(ctk.CTk):
         self.ir_para_pagina(self.pagina_atual + 1)
         
     def atualizar_label_pagina(self):
-        total_paginas = math.ceil(len(self.dados_exibidos) / ITENS_POR_PAGINA) if self.dados_exibidos else 1
-        self.label_pagina.configure(text=f"Página {self.pagina_atual} / {max(1, total_paginas)}")
+        total_registos = self.controller.total_registos
+        total_paginas = self.controller.total_paginas
+        self.label_pagina.configure(text=f"Página {self.pagina_atual} / {total_paginas} (Total: {total_registos})")
 
+    # --- Funções de Carga de Dados e API (Melhorias no Tratamento de Erros) ---
     def carregar_dados_iniciais_com_cache(self, is_auto_refresh=False):
         try:
             if not is_auto_refresh:
                 self.after(0, lambda: self.update_status("A carregar dados do cache..."))
                 self.after(0, lambda: self.tabela.mostrar_mensagem("A carregar..."))
+                
+                # NOVO: Carrega no controller
                 dados_iniciais = self.api.buscar_todos(force_refresh=False)
                 if dados_iniciais:
-                    self.dados_completos = dados_iniciais
+                    self.controller.dados_completos = dados_iniciais
                     self.after(0, self.renderizar_dados)
                     self.after(0, lambda: self.update_status(f"{len(dados_iniciais)} registos carregados do cache."))
                 else:
                     self.after(0, lambda: self.update_status("Cache vazio. A buscar dados da API..."))
             
             dados_frescos = self.api.buscar_todos(force_refresh=True)
-            if dados_frescos and dados_frescos != self.dados_completos:
+            
+            if dados_frescos and dados_frescos != self.controller.dados_completos:
                 logging.info("Dados atualizados encontrados. A atualizar a interface.")
-                self.dados_completos = dados_frescos
+                self.controller.dados_completos = dados_frescos
                 self.after(0, self.renderizar_dados)
                 self.after(0, lambda: self.update_status(f"Dados atualizados. Total de {len(dados_frescos)} registos."))
             elif is_auto_refresh:
@@ -392,9 +352,12 @@ class AppGUI(ctk.CTk):
             now = datetime.now().strftime("%H:%M:%S")
             self.last_updated_label.configure(text=f"Última verificação: {now}")
 
-        except Exception as e:
+        except ConsultaAPIException as e: # Captura exceções customizadas
             logging.error(f"Falha ao carregar dados: {e}")
-            self.after(0, lambda err=e: self.update_status(f"Erro ao carregar dados: {err}", clear_after_ms=5000))
+            self.after(0, lambda err=e: self.update_status(f"ERRO API: {e}", clear_after_ms=5000))
+        except Exception as e:
+            logging.error(f"Falha inesperada ao carregar dados: {e}")
+            self.after(0, lambda err=e: self.update_status(f"ERRO INESPERADO: {e}", clear_after_ms=5000))
         finally:
             if not is_auto_refresh:
                 self.after(0, lambda: self.gerir_estado_widgets(True))
@@ -405,7 +368,6 @@ class AppGUI(ctk.CTk):
     def consultar_api(self):
         id_msg = self.entry_id.get().strip()
         
-        # --- CORREÇÃO: Validação de ID mais robusta (checa se está vazio OU não é dígito) ---
         if not id_msg or not id_msg.isdigit():
             self.after(0, lambda: messagebox.showwarning("Atenção", "IDMENSAGEM deve ser um número inteiro e não pode estar vazio!"))
             return
@@ -414,12 +376,24 @@ class AppGUI(ctk.CTk):
         self.update_status(f"A buscar IDMENSAGEM {id_msg}...")
         try:
             dados = self.api.consultar(id_msg)
-            self.dados_completos = dados
+            # NOVO: Define os dados no Controller
+            self.controller.dados_completos = dados 
+            
             self.after(0, self.renderizar_dados)
-            self.after(0, lambda: self.update_status(f"{len(dados)} registos encontrados para o ID {id_msg}.", clear_after_ms=5000))
-        except Exception as e:
+            
+            # CORREÇÃO: Feedback claro se não houver registos
+            if not dados:
+                 self.after(0, lambda: self.update_status(f"ID {id_msg} consultado. Nenhum registo encontrado.", clear_after_ms=5000))
+            else:
+                 self.after(0, lambda: self.update_status(f"{len(dados)} registos encontrados para o ID {id_msg}.", clear_after_ms=5000))
+                 
+        except ConsultaAPIException as e: # Captura exceções customizadas
             self.after(0, lambda err=e: messagebox.showerror("Erro de API", f"Falha na consulta:\n{err}"))
             self.after(0, lambda: self.update_status(f"Erro na consulta do ID {id_msg}.", clear_after_ms=5000))
+        except Exception as e:
+            logging.error(f"Falha inesperada na consulta: {e}")
+            self.after(0, lambda err=e: messagebox.showerror("Erro Inesperado", f"Falha na consulta:\n{e}"))
+            self.after(0, lambda: self.update_status(f"Erro inesperado na consulta do ID {id_msg}.", clear_after_ms=5000))
         finally:
             self.after(0, lambda: self.btn_consultar.configure(state="normal", text="Consultar"))
     
@@ -449,15 +423,22 @@ class AppGUI(ctk.CTk):
         
     def _get_dados_para_exportar(self):
         dados_selecionados = self.tabela.get_itens_selecionados()
+        # Delega ao Controller quais dados exportar (filtrados ou selecionados)
+        dados = self.controller.get_dados_para_exportar(dados_selecionados) 
+        
         if dados_selecionados:
-            self.update_status(f"A exportar {len(dados_selecionados)} linhas selecionadas...")
-            return dados_selecionados
-        self.update_status(f"A exportar {len(self.dados_exibidos)} linhas...")
-        return self.dados_exibidos
+            self.update_status(f"A exportar {len(dados)} linhas selecionadas...")
+        else:
+            self.update_status(f"A exportar {len(dados)} linhas (dados filtrados)...")
+        return dados
 
     def on_closing(self):
         self.app_state["theme"] = self.tema_atual
         self.app_state["geometry"] = self.geometry()
+        # NOVO: Salva o estado de ordenação e paginação do Controller
+        self.app_state["coluna_ordenacao"] = self.controller.coluna_ordenacao
+        self.app_state["ordem_desc"] = self.controller.ordem_desc
+        self.app_state["pagina_atual"] = self.pagina_atual
         save_state(self.app_state)
         logging.info("Aplicação a encerrar.")
         self.destroy()
@@ -501,7 +482,6 @@ class AppGUI(ctk.CTk):
         for btn in botoes:
             btn.configure(fg_color=cores["button_bg"], hover_color=cores["button_hover"], text_color=cores["selected_fg"])
         for entry in entries:
-            # Configura cor de borda padrão para entries. _handle_date_validation altera a cor de erro.
             entry.configure(fg_color=cores["entry_bg"], text_color=cores["fg"], border_color=cores["button_hover"], border_width=1, placeholder_text_color=cores["placeholder"])
         for lbl in labels:
             lbl.configure(text_color=cores["fg"])

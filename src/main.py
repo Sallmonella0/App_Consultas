@@ -1,7 +1,7 @@
 # src/main.py
 import logging
-from dotenv import load_dotenv # NOVO: Para carregar variáveis de ambiente
-import os # NOVO: Para acessar variáveis de ambiente
+from dotenv import load_dotenv 
+import os 
 
 # --- IMPORTAÇÕES CORRIGIDAS ---
 from src.gui.app_gui_ctk import AppGUI
@@ -20,7 +20,7 @@ PASSWORD = os.getenv("API_PASSWORD")
 
 if __name__ == "__main__":
     if not all([URL_API, USER, PASSWORD]):
-        logging.error("Credenciais da API não encontradas. Certifique-se de que o arquivo .env está configurado corretamente.")
+        logging.error("Credenciais da API não encontradas. Certifique-se de que o arquivo .env está configurado corretamente (API_URL, API_USER, API_PASSWORD).")
         # Em uma aplicação real, você pode querer adicionar uma mensagem de erro na tela antes de encerrar.
     
     api = ConsultaAPI(URL_API, USER, PASSWORD)
