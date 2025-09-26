@@ -2,7 +2,6 @@
 import requests
 import json
 import logging
-# --- IMPORTAÇÃO CORRIGIDA ---
 from src.core.cache import CacheManager # Alterado para importar a classe
 
 def sanitizar_dados(data):
@@ -19,7 +18,6 @@ class ConsultaAPI:
         self.base_url = url
         self.auth = (user, password)
         self.headers = {'Content-Type': 'application/json'}
-        # --- NOVO: Instanciar CacheManager ---
         self.cache_manager = CacheManager() 
         logging.info("Instância de ConsultaAPI criada.")
         
@@ -36,7 +34,6 @@ class ConsultaAPI:
             
     def buscar_todos(self, force_refresh=False):
         if not force_refresh:
-            # --- CORREÇÃO: Usar o método da instância da classe CacheManager ---
             cached_data = self.cache_manager.get_cached_data() 
             if cached_data:
                 return sanitizar_dados(cached_data)
@@ -46,16 +43,12 @@ class ConsultaAPI:
         fresh_data = self._fazer_requisicao(payload)
         
         if fresh_data:
-            # --- CORREÇÃO: Usar o método da instância da classe CacheManager ---
             self.cache_manager.set_cached_data(fresh_data)
             
         return fresh_data
         
     def consultar(self, id_mensagem):
-        if not id_mensagem or not id_mensagem.isdigit(): return []
-        logging.info(f"Consultando API pelo IDMENSAGEM: {id_mensagem}")
-        payload = {"IDMENSAGEM": int(id_mensagem)}
-        return self._fazer_requisicao(payload)
+        # CORREÇÃO: Remoção do código duplicado.
         if not id_mensagem or not id_mensagem.isdigit(): return []
         logging.info(f"Consultando API pelo IDMENSAGEM: {id_mensagem}")
         payload = {"IDMENSAGEM": int(id_mensagem)}

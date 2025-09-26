@@ -12,10 +12,11 @@ from src.utils.exportar import Exportar
 from src.utils.config import COLUNAS
 from src.utils.settings_manager import AUTO_REFRESH_MINUTES, ITENS_POR_PAGINA
 from src.utils.state_manager import load_state, save_state
+from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_date 
 
 TEMAS = {
-    "dark_green": { "bg": "#111111", "alt_bg": "#1C1C1C", "fg": "#D0F0C0", "selected_bg": "#66FF66", "selected_fg": "#111111", "button_bg": "#33CC33", "button_hover": "#22AA22", "entry_bg": "#222222", "placeholder": "#88CC88" },
-    "light_green": { "bg": "#D3D3D3", "alt_bg": "#FFFAFA", "fg": "#111111", "selected_bg": "#80EF80", "selected_fg": "#000000", "button_bg": "#80EF80", "button_hover": "#80EF80", "entry_bg": "#FFFAFA", "placeholder": "#80EF80" }
+    "dark_green": { "bg": "#111111", "alt_bg": "#1C1C1C", "fg": "#D0F0C0", "selected_bg": "#66FF66", "selected_fg": "#111111", "button_bg": "#33CC33", "button_hover": "#22AA22", "entry_bg": "#222222", "placeholder": "#88CC88", "error_color": "#FF6666" },
+    "light_green": { "bg": "#D3D3D3", "alt_bg": "#FFFAFA", "fg": "#111111", "selected_bg": "#80EF80", "selected_fg": "#000000", "button_bg": "#80EF80", "button_hover": "#80EF80", "entry_bg": "#FFFAFA", "placeholder": "#80EF80", "error_color": "#CC3333" }
 }
 
 class AppGUI(ctk.CTk):
@@ -69,7 +70,9 @@ class AppGUI(ctk.CTk):
         self.entry_id = ctk.CTkEntry(self.frame_top, width=150)
         self.entry_id.pack(side="left")
         self.entry_id.bind("<Return>", lambda e: self.consultar_api_async())
-        self.btn_consultar = ctk.CTkButton(self.frame_top, text="Consultar", width=100, command=self.consultar_api_async)
+        
+        # CORREÇÃO: Envolver o comando em lambda para resolver AttributeError
+        self.btn_consultar = ctk.CTkButton(self.frame_top, text="Consultar", width=100, command=lambda: self.consultar_api_async())
         self.btn_consultar.pack(side="left", padx=5)
 
         self.btn_alternar_tema = ctk.CTkButton(self.frame_top, text="Alternar Tema", command=self.alternar_tema)
@@ -94,15 +97,19 @@ class AppGUI(ctk.CTk):
         
         self.label_data_inicio = ctk.CTkLabel(self.frame_filtros, text="De:")
         self.label_data_inicio.pack(side="left", padx=(10, 5))
+        
         self.entry_data_inicio = ctk.CTkEntry(self.frame_filtros, placeholder_text="AAAA-MM-DD", width=120)
         self.entry_data_inicio.pack(side="left")
         self.entry_data_inicio.bind("<KeyRelease>", self.aplicar_filtro_debounce)
+        self.entry_data_inicio.bind("<FocusIn>", lambda e: self._reset_date_border(self.entry_data_inicio))
 
         self.label_data_fim = ctk.CTkLabel(self.frame_filtros, text="Até:")
         self.label_data_fim.pack(side="left", padx=(10, 5))
+        
         self.entry_data_fim = ctk.CTkEntry(self.frame_filtros, placeholder_text="AAAA-MM-DD", width=120)
         self.entry_data_fim.pack(side="left")
         self.entry_data_fim.bind("<KeyRelease>", self.aplicar_filtro_debounce)
+        self.entry_data_fim.bind("<FocusIn>", lambda e: self._reset_date_border(self.entry_data_fim))
 
         # --- Frame da Tabela (Principal) ---
         self.frame_table = ctk.CTkFrame(self, fg_color="transparent")
@@ -167,6 +174,39 @@ class AppGUI(ctk.CTk):
             return "break"
 
     # --- Lógica de Dados e UI (Otimizada) ---
+    def _handle_date_validation(self):
+        """Valida o formato das datas inseridas e fornece feedback visual."""
+        data_inicio_str = self.entry_data_inicio.get()
+        data_fim_str = self.entry_data_fim.get()
+        cores = TEMAS[self.tema_atual]
+        
+        is_valid = True
+        
+        # 1. Validação de Data Início
+        if data_inicio_str and not is_valid_ui_date(data_inicio_str):
+            self.entry_data_inicio.configure(border_color=cores["error_color"], border_width=2)
+            self.update_status("ERRO: Formato de data inválido (Use AAAA-MM-DD).", clear_after_ms=5000)
+            is_valid = False
+        else:
+            self._reset_date_border(self.entry_data_inicio)
+        
+        # 2. Validação de Data Fim
+        if data_fim_str and not is_valid_ui_date(data_fim_str):
+            self.entry_data_fim.configure(border_color=cores["error_color"], border_width=2)
+            if is_valid: # Apenas atualiza o status se não houver outro erro de data
+                self.update_status("ERRO: Formato de data inválido (Use AAAA-MM-DD).", clear_after_ms=5000)
+            is_valid = False
+        else:
+            self._reset_date_border(self.entry_data_fim)
+            
+        return is_valid
+        
+    def _reset_date_border(self, entry_widget):
+        """Reseta a cor da borda de um widget de entrada de data."""
+        cores = TEMAS[self.tema_atual]
+        # Restaura a cor de borda padrão e a largura
+        entry_widget.configure(border_color=cores["button_hover"], border_width=1)
+
     def processar_fila_renderizacao(self):
         try:
             dados_processados = self.render_queue.get_nowait()
@@ -195,18 +235,31 @@ class AppGUI(ctk.CTk):
             else:
                 dados_filtrados = [item for item in dados_filtrados if termo in str(item.get(coluna, "")).lower()]
         
-        # --- CORREÇÃO: Validação de Data mais robusta com feedback para a UI ---
+        # --- CORREÇÃO: Uso de utilitário de data e validação simplificada ---
+        data_filter_error = False
+        
         try:
-            data_filter_error = False
+            # Converte as strings da UI para objetos date, se existirem e forem válidas
+            data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
+            data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date() if data_fim_str else None
             
-            if data_inicio_str:
-                data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
-                dados_filtrados = [item for item in dados_filtrados if datetime.fromisoformat(item.get("DATAHORA", "").replace("T", " ")).date() >= data_inicio]
-            if data_fim_str:
-                data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
-                dados_filtrados = [item for item in dados_filtrados if datetime.fromisoformat(item.get("DATAHORA", "").replace("T", " ")).date() <= data_fim]
+            if data_inicio or data_fim:
+                def filter_date(item):
+                    # Usa a função utilitária para obter o objeto date
+                    item_date = parse_api_datetime_to_date(item.get("DATAHORA"))
+                    if not item_date:
+                        return False # Ignora itens sem DATAHORA válida
+                    
+                    if data_inicio and item_date < data_inicio:
+                        return False
+                    if data_fim and item_date > data_fim:
+                        return False
+                    return True
+
+                dados_filtrados = [item for item in dados_filtrados if filter_date(item)]
                 
         except (ValueError, TypeError):
+            # Deve ser apanhado pela pré-validação, mas mantido como fallback
             data_filter_error = True
             logging.warning(f"Formato de data inválido ('{data_inicio_str}' ou '{data_fim_str}'). Ignorando filtro de data.")
         # --- FIM DA CORREÇÃO ---
@@ -218,9 +271,8 @@ class AppGUI(ctk.CTk):
         
         if thread_id == self.current_render_thread:
             self.render_queue.put(dados_ordenados)
-            # --- CORREÇÃO: Enviar erro para a UI se houver falha na data ---
+            # Envia erro para a UI se houver falha na data
             if data_filter_error:
-                # Usa self.after para garantir que a atualização da UI ocorra na thread principal
                 self.after(0, lambda: self.update_status("ERRO: Formato de data inválido (Use AAAA-MM-DD).", clear_after_ms=5000))
 
     def renderizar_dados(self):
@@ -245,6 +297,11 @@ class AppGUI(ctk.CTk):
     def aplicar_filtro_debounce(self, event=None):
         if self._debounce_id:
             self.after_cancel(self._debounce_id)
+            
+        # NOVO: Se a validação de data falhar, impede a aplicação do filtro
+        if not self._handle_date_validation():
+            return
+
         self._debounce_id = self.after(300, self.aplicar_filtro)
 
     def aplicar_filtro(self):
@@ -255,6 +312,9 @@ class AppGUI(ctk.CTk):
         self.entry_filtro.delete(0, 'end')
         self.entry_data_inicio.delete(0, 'end')
         self.entry_data_fim.delete(0, 'end')
+        # NOVO: Reseta o feedback visual
+        self._reset_date_border(self.entry_data_inicio)
+        self._reset_date_border(self.entry_data_fim)
         self.aplicar_filtro()
         
     def ordenar_por_coluna(self, coluna):
@@ -431,7 +491,8 @@ class AppGUI(ctk.CTk):
         for btn in botoes:
             btn.configure(fg_color=cores["button_bg"], hover_color=cores["button_hover"], text_color=cores["selected_fg"])
         for entry in entries:
-            entry.configure(fg_color=cores["entry_bg"], text_color=cores["fg"], border_color=cores["button_hover"], placeholder_text_color=cores["placeholder"])
+            # Configura cor de borda padrão para entries. _handle_date_validation altera a cor de erro.
+            entry.configure(fg_color=cores["entry_bg"], text_color=cores["fg"], border_color=cores["button_hover"], border_width=1, placeholder_text_color=cores["placeholder"])
         for lbl in labels:
             lbl.configure(text_color=cores["fg"])
         for combo in combos:
