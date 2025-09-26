@@ -17,6 +17,7 @@ def chave_de_ordenacao_segura(item, coluna):
     if coluna == "DATAHORA":
         if isinstance(valor, str) and valor.strip():
             try:
+                # Trata o formato esperado da API
                 return datetime.strptime(valor, '%Y-%m-%dT%H:%M:%S')
             except (ValueError, TypeError):
                 logging.warning(f"Formato de data inválido: '{valor}'. Esperado 'AAAA-MM-DDTHH:MM:SS'.")
@@ -27,7 +28,8 @@ def chave_de_ordenacao_segura(item, coluna):
 
 
 class Tabela(ctk.CTkFrame):
-    def __init__(self, master, colunas, **kwargs):
+    # CORREÇÃO: Adiciona on_sort_command para desacoplamento
+    def __init__(self, master, colunas, on_sort_command, **kwargs):
         super().__init__(master, **kwargs)
         self.master = master
         self.colunas = colunas
@@ -38,8 +40,8 @@ class Tabela(ctk.CTkFrame):
         self.tree = ttk.Treeview(self, columns=self.colunas, show="headings", selectmode="extended")
         
         for col in self.colunas:
-            # O comando 'lambda c=col:' garante que o valor de 'col' correto seja passado no momento do clique
-            self.tree.heading(col, text=col, anchor="w", command=lambda c=col: self.master.ordenar_por_coluna(c))
+            # CORREÇÃO: Usa o callback passado no construtor
+            self.tree.heading(col, text=col, anchor="w", command=lambda c=col: on_sort_command(c))
             self.tree.column(col, anchor="w", width=140, stretch=True)
             
         self.tree.pack(side="left", fill="both", expand=True)

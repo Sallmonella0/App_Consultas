@@ -3,7 +3,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 import threading
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta # timedelta é necessário para a correção do filtro de data
 import math
 from queue import Queue
 
@@ -116,7 +116,8 @@ class AppGUI(ctk.CTk):
         self.frame_table.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
         self.frame_table.grid_rowconfigure(0, weight=1)
         self.frame_table.grid_columnconfigure(0, weight=1)
-        self.tabela = Tabela(self, COLUNAS)
+        # CORREÇÃO: Passa self.ordenar_por_coluna como callback para a Tabela (Desacoplamento)
+        self.tabela = Tabela(self, COLUNAS, on_sort_command=self.ordenar_por_coluna)
         self.tabela.grid(in_=self.frame_table, row=0, column=0, sticky="nsew")
 
         # --- Frame Inferior (Paginação e Exportação) ---
@@ -240,10 +241,18 @@ class AppGUI(ctk.CTk):
         
         try:
             # Converte as strings da UI para objetos date, se existirem e forem válidas
+            data_inicio_str = self.entry_data_inicio.get()
+            data_fim_str = self.entry_data_fim.get()
+
             data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
-            data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date() if data_fim_str else None
             
-            if data_inicio or data_fim:
+            # CORREÇÃO: Ajusta data_fim para ser inclusiva (data_fim_exclusiva)
+            data_fim_exclusiva = None
+            if data_fim_str:
+                data_fim_date = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
+                data_fim_exclusiva = data_fim_date + timedelta(days=1) # O filtro agora usa o dia seguinte como limite superior exclusivo
+            
+            if data_inicio or data_fim_exclusiva:
                 def filter_date(item):
                     # Usa a função utilitária para obter o objeto date
                     item_date = parse_api_datetime_to_date(item.get("DATAHORA"))
@@ -252,7 +261,8 @@ class AppGUI(ctk.CTk):
                     
                     if data_inicio and item_date < data_inicio:
                         return False
-                    if data_fim and item_date > data_fim:
+                    # CORREÇÃO: Compara com o dia seguinte, tornando o limite superior inclusivo
+                    if data_fim_exclusiva and item_date >= data_fim_exclusiva:
                         return False
                     return True
 

@@ -9,7 +9,19 @@ def sanitizar_dados(data):
     dados_limpos = []
     for item in data:
         if isinstance(item, dict):
+            # Garante que DATAHORA existe
             if 'DATAHORA' not in item: item['DATAHORA'] = None
+            
+            # NOVO: Sanitização robusta para IDMENSAGEM (garante que seja int ou None)
+            id_msg = item.get('IDMENSAGEM')
+            if id_msg is not None:
+                try:
+                    # Tenta converter para inteiro, caso seja uma string
+                    item['IDMENSAGEM'] = int(id_msg)
+                except (ValueError, TypeError):
+                    logging.warning(f"IDMENSAGEM com formato inválido ('{id_msg}'). Definido como None.")
+                    item['IDMENSAGEM'] = None # Define como None em caso de falha
+            
             dados_limpos.append(item)
     return dados_limpos
 
