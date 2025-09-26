@@ -12,10 +12,12 @@ from src.core.data_controller import DataController # Importa o Controller
 from src.core.exceptions import ConsultaAPIException, APIAuthError # Importa exceções
 # -------------------------
 
-from src.gui.tabela import Tabela, chave_de_ordenacao_segura
+from src.gui.tabela import Tabela 
+# Importação de chave_de_ordenacao_segura removida pois foi movida para data_utils.py
+
 from src.utils.exportar import Exportar
 from src.utils.config import COLUNAS
-from src.utils.settings_manager import AUTO_REFRESH_MINUTES, ITENS_POR_PAGINA
+from src.utils.settings_manager import AUTO_REFRESH_MINUTES, ITENS_POR_PAGINA # Mantém ITENS_POR_PAGINA para injeção
 from src.utils.state_manager import load_state, save_state
 from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_date 
 
@@ -33,11 +35,14 @@ class AppGUI(ctk.CTk):
         self.app_state = load_state()
         self.tema_atual = self.app_state.get("theme", "dark_green")
         self._debounce_id = None
+        # CORREÇÃO: Adiciona ID para controle de limpeza do status bar
+        self._status_clear_id = None 
         self.pagina_atual = 1
         self.is_fullscreen = False
         
         # NOVO: Instancia o DataController e remove a gestão de dados da GUI
-        self.controller = DataController(COLUNAS) 
+        # CORREÇÃO: Injeta ITENS_POR_PAGINA no DataController
+        self.controller = DataController(COLUNAS, ITENS_POR_PAGINA) 
         
         # --- Controlo de Threads de Filtragem ---
         self.render_queue = Queue()
@@ -375,7 +380,9 @@ class AppGUI(ctk.CTk):
         self.after(0, lambda: self.btn_consultar.configure(state="disabled", text="Buscando..."))
         self.update_status(f"A buscar IDMENSAGEM {id_msg}...")
         try:
+            # Garante que a entrada é tratada como número antes de enviar à API
             dados = self.api.consultar(id_msg)
+            
             # NOVO: Define os dados no Controller
             self.controller.dados_completos = dados 
             
@@ -443,10 +450,23 @@ class AppGUI(ctk.CTk):
         logging.info("Aplicação a encerrar.")
         self.destroy()
 
+    # CORREÇÃO: Implementação de gerenciamento de status concorrente
     def update_status(self, message, clear_after_ms=0):
         self.status_label.configure(text=message)
+        
+        # 1. Cancela a limpeza agendada anteriormente
+        if self._status_clear_id:
+            self.after_cancel(self._status_clear_id)
+            self._status_clear_id = None
+        
         if clear_after_ms > 0:
-            self.after(clear_after_ms, lambda: self.status_label.configure(text=""))
+            # Função interna para limpar o status
+            def clear():
+                self.status_label.configure(text="")
+                self._status_clear_id = None
+
+            # 2. Agenda a nova limpeza e salva o ID
+            self._status_clear_id = self.after(clear_after_ms, clear)
 
     def schedule_auto_refresh(self):
         if AUTO_REFRESH_MINUTES > 0:

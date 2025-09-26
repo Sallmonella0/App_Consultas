@@ -3,17 +3,19 @@ import math
 from datetime import datetime, timedelta
 import logging
 
-# Tenta importar as dependências que o Controller precisa da GUI/Utils.
-# Se falhar (como em testes unitários sem a estrutura completa), usa fallbacks.
+# --- CORREÇÃO: Remoção de importações da GUI e injeção de dependências ---
 try:
-    from src.gui.tabela import chave_de_ordenacao_segura
-    from src.utils.settings_manager import ITENS_POR_PAGINA
+    # Nova importação do utilitário de ordenação (movido de src/gui/tabela.py)
+    from src.utils.data_utils import chave_de_ordenacao_segura 
+    # ITENS_POR_PAGINA foi removido, agora é injetado.
     from src.utils.datetime_utils import parse_api_datetime_to_date
 except ImportError as e:
     logging.warning(f"Dependências do DataController não encontradas: {e}. Usando fallbacks.")
     # Fallbacks para garantir que a classe é funcional
+    # Fallback para chave_de_ordenacao_segura (simples)
     def chave_de_ordenacao_segura(item, coluna): return item.get(coluna)
-    ITENS_POR_PAGINA = 50
+    ITENS_POR_PAGINA_FALLBACK = 50 # Definição de fallback para itens por página
+    # Fallback para parse_api_datetime_to_date
     def parse_api_datetime_to_date(dt_str): 
         if dt_str: 
             try: return datetime.strptime(dt_str.split(' ')[0], '%Y-%m-%d').date()
@@ -21,13 +23,17 @@ except ImportError as e:
         return None
 # ----------------------------------------------------------------------------
 
+# Define um fallback simples para itens por página caso o import acima falhe
+if 'ITENS_POR_PAGINA_FALLBACK' not in locals():
+    ITENS_POR_PAGINA_FALLBACK = 50 
 
 class DataController:
     """
     Controla a lógica de negócios para filtragem, ordenação e paginação.
     Desacopla a AppGUI dessas responsabilidades.
     """
-    def __init__(self, colunas):
+    # CORREÇÃO: Recebe itens_por_pagina por injeção de dependência
+    def __init__(self, colunas, itens_por_pagina):
         self._dados_completos = []
         self._dados_filtrados = []
         self.colunas = colunas
@@ -37,6 +43,8 @@ class DataController:
         self.coluna_filtro = "PLACA"
         self.data_inicio_filtro = None
         self.data_fim_filtro_exclusiva = None
+        # NOVO: Variável interna para itens por página (usa injeção ou fallback)
+        self.itens_por_pagina = itens_por_pagina if itens_por_pagina > 0 else ITENS_POR_PAGINA_FALLBACK
 
     @property
     def dados_completos(self):
@@ -121,7 +129,8 @@ class DataController:
 
     @property
     def total_paginas(self):
-        return math.ceil(self.total_registos / ITENS_POR_PAGINA) if self.total_registos else 1
+        # CORREÇÃO: Usa self.itens_por_pagina (injetado)
+        return math.ceil(self.total_registos / self.itens_por_pagina) if self.total_registos else 1
 
     def get_dados_pagina(self, numero_pagina):
         """Retorna os dados para a página solicitada."""
@@ -130,8 +139,9 @@ class DataController:
         # Garante que o número da página é válido
         numero_pagina = max(1, min(numero_pagina, total_paginas))
         
-        inicio = (numero_pagina - 1) * ITENS_POR_PAGINA
-        fim = inicio + ITENS_POR_PAGINA
+        # CORREÇÃO: Usa self.itens_por_pagina (injetado)
+        inicio = (numero_pagina - 1) * self.itens_por_pagina
+        fim = inicio + self.itens_por_pagina
         
         # Retorna o número da página corrigido e os dados
         return numero_pagina, self._dados_filtrados[inicio:fim]

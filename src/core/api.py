@@ -6,6 +6,7 @@ from src.core.cache import CacheManager
 from src.core.exceptions import APIConnectionError, APIAuthError, APIClientError, APIServerError, APIResponseError, ConsultaAPIException # NOVO: Importa exceções customizadas
 
 def sanitizar_dados(data):
+# ... (restante da função sanitizar_dados) ...
     if not isinstance(data, list): return []
     dados_limpos = []
     for item in data:
@@ -35,6 +36,7 @@ class ConsultaAPI:
         logging.info("Instância de ConsultaAPI criada.")
         
     def _fazer_requisicao(self, payload):
+# ... (restante da função _fazer_requisicao) ...
         try:
             response = requests.post(self.base_url, auth=self.auth, json=payload, timeout=15)
             
@@ -72,6 +74,7 @@ class ConsultaAPI:
             raise # Lança as exceções customizadas já capturadas acima
             
     def buscar_todos(self, force_refresh=False):
+# ... (restante da função buscar_todos) ...
         if not force_refresh:
             cached_data = self.cache_manager.get_cached_data() 
             if cached_data:
@@ -87,8 +90,13 @@ class ConsultaAPI:
         return fresh_data
         
     def consultar(self, id_mensagem):
-        # CORREÇÃO: Remoção do código duplicado.
-        if not id_mensagem or not id_mensagem.isdigit(): return []
+        # CORREÇÃO: Remoção da validação redundante 'or not id_mensagem.isdigit()'.
+        # A GUI é responsável por garantir que o ID seja um número válido antes de chamar.
+        if not id_mensagem: return [] 
+        
         logging.info(f"Consultando API pelo IDMENSAGEM: {id_mensagem}")
-        payload = {"IDMENSAGEM": int(id_mensagem)}
+        
+        # O int() levantará um ValueError se a entrada for inválida (ex: 'abc'), 
+        # mas a GUI deve lidar com isso antes.
+        payload = {"IDMENSAGEM": int(id_mensagem)} 
         return self._fazer_requisicao(payload)

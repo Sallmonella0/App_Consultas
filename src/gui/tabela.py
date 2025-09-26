@@ -1,31 +1,9 @@
 # src/gui/tabela.py
 import customtkinter as ctk
 from tkinter import ttk
-from datetime import datetime
-import logging
+# datetime e logging removidos pois chave_de_ordenacao_segura foi movida para src/utils/data_utils.py
 
-def chave_de_ordenacao_segura(item, coluna):
-    """
-    Função de ordenação genérica e segura.
-    Ordena por data se a coluna for 'DATAHORA', caso contrário, ordena como string.
-    """
-    if not isinstance(item, dict):
-        return "" if coluna != "DATAHORA" else datetime.min
-
-    valor = item.get(coluna)
-
-    if coluna == "DATAHORA":
-        if isinstance(valor, str) and valor.strip():
-            try:
-                # Trata o formato esperado da API
-                return datetime.strptime(valor, '%Y-%m-%dT%H:%M:%S')
-            except (ValueError, TypeError):
-                logging.warning(f"Formato de data inválido: '{valor}'. Esperado 'AAAA-MM-DDTHH:MM:SS'.")
-                return datetime.min
-        return datetime.min
-    
-    return str(valor or "").lower()
-
+# A função chave_de_ordenacao_segura foi removida.
 
 class Tabela(ctk.CTkFrame):
     # CORREÇÃO: Adiciona on_sort_command para desacoplamento
