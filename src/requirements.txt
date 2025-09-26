@@ -2,3 +2,4 @@ requests
 customtkinter
 pandas
 xlsxwriter
+python-dotenv  # NOVO: Para carregar API_URL, USER e PASSWORD de forma segura
