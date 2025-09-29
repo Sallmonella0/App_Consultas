@@ -89,6 +89,11 @@ class AppGUI(ctk.CTk):
         self.btn_consultar = ctk.CTkButton(self.frame_top, text="Consultar", width=100, command=lambda: self.consultar_api_async())
         self.btn_consultar.pack(side="left", padx=5)
 
+        # NOVO CÓDIGO: Botão de Refresh
+        self.btn_refresh = ctk.CTkButton(self.frame_top, text="Refresh", width=100, command=self.refresh_data_async)
+        self.btn_refresh.pack(side="left", padx=5)
+        # FIM NOVO CÓDIGO
+        
         self.btn_alternar_tema = ctk.CTkButton(self.frame_top, text="Alternar Tema", command=self.alternar_tema)
         self.btn_alternar_tema.pack(side="right", padx=5)
         
@@ -170,7 +175,8 @@ class AppGUI(ctk.CTk):
             self.entry_filtro, self.combo_coluna, self.btn_limpar_filtro,
             self.entry_data_inicio, self.entry_data_fim,
             self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, 
-            self.btn_excel, self.btn_csv
+            self.btn_excel, self.btn_csv,
+            self.btn_refresh  # ADICIONADO: Botão de refresh à lista de widgets
         ]
     
     # --- Funções de Tela Cheia, _handle_date_validation, _reset_date_border (mantidas) ---
@@ -370,6 +376,20 @@ class AppGUI(ctk.CTk):
     def consultar_api_async(self):
         threading.Thread(target=self.consultar_api, daemon=True).start()
 
+    # NOVO MÉTODO: Função assíncrona para o botão Refresh
+    def refresh_data_async(self):
+        """
+        Inicia o carregamento e atualização de dados forçada da API.
+        Desativa os widgets e executa a busca numa thread separada.
+        """
+        # Desativa os widgets para evitar interações durante a busca
+        self.gerir_estado_widgets(False) 
+        self.update_status("A forçar atualização de dados da API...")
+        # Inicia o processo de carregamento que buscará dados frescos (force_refresh=True)
+        # e reabilitará a GUI no bloco 'finally' de carregar_dados_iniciais_com_cache.
+        threading.Thread(target=self.carregar_dados_iniciais_com_cache, daemon=True).start()
+    # FIM NOVO MÉTODO
+
     def consultar_api(self):
         id_msg = self.entry_id.get().strip()
         
@@ -493,7 +513,8 @@ class AppGUI(ctk.CTk):
         botoes = [
             self.btn_consultar, self.btn_csv, self.btn_excel, self.btn_alternar_tema, 
             self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, 
-            self.btn_limpar_filtro
+            self.btn_limpar_filtro,
+            self.btn_refresh # ADICIONADO: Aplica o tema ao novo botão
         ]
         entries = [self.entry_id, self.entry_filtro, self.entry_data_inicio, self.entry_data_fim]
         labels = [self.label_id, self.label_filtro, self.label_pagina, self.label_data_inicio, self.label_data_fim]
