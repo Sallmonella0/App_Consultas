@@ -1,6 +1,7 @@
 # src/gui/app_gui_ctk.py
 import customtkinter as ctk
 from tkinter import messagebox
+from tkinter import ttk # Necessário para a Tabela
 import threading
 import logging
 from datetime import datetime, timedelta 
@@ -13,11 +14,10 @@ from src.core.exceptions import ConsultaAPIException, APIAuthError # Importa exc
 # -------------------------
 
 from src.gui.tabela import Tabela 
-# Importação de chave_de_ordenacao_segura removida pois foi movida para data_utils.py
 
 from src.utils.exportar import Exportar
 from src.utils.config import COLUNAS
-from src.utils.settings_manager import AUTO_REFRESH_MINUTES, ITENS_POR_PAGINA # Mantém ITENS_POR_PAGINA para injeção
+from src.utils.settings_manager import AUTO_REFRESH_MINUTES, ITENS_POR_PAGINA 
 from src.utils.state_manager import load_state, save_state
 from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_date 
 
@@ -25,6 +25,56 @@ TEMAS = {
     "dark_green": { "bg": "#111111", "alt_bg": "#1C1C1C", "fg": "#D0F0C0", "selected_bg": "#66FF66", "selected_fg": "#111111", "button_bg": "#33CC33", "button_hover": "#22AA22", "entry_bg": "#222222", "placeholder": "#88CC88", "error_color": "#FF6666" },
     "light_green": { "bg": "#D3D3D3", "alt_bg": "#FFFAFA", "fg": "#111111", "selected_bg": "#80EF80", "selected_fg": "#000000", "button_bg": "#80EF80", "button_hover": "#80EF80", "entry_bg": "#FFFAFA", "placeholder": "#80EF80", "error_color": "#CC3333" }
 }
+
+# NOVO: Janela de Configuração de Colunas
+class ColumnSettingsWindow(ctk.CTkToplevel):
+    def __init__(self, master, all_columns, current_visible_columns, apply_callback, **kwargs):
+        super().__init__(master, **kwargs)
+        self.title("Configurar Colunas Visíveis")
+        self.transient(master)
+        self.master = master
+        self.all_columns = all_columns
+        self.apply_callback = apply_callback
+        self.checkbox_vars = {}
+        
+        self.grab_set() 
+        self.grid_columnconfigure(0, weight=1)
+        
+        frame = ctk.CTkScrollableFrame(self)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Cria Checkboxes para cada coluna
+        for i, col in enumerate(self.all_columns):
+            var = ctk.BooleanVar(value=(col in current_visible_columns))
+            chk = ctk.CTkCheckBox(frame, text=col, variable=var)
+            chk.pack(anchor="w", pady=2)
+            self.checkbox_vars[col] = var
+        
+        # Frame para os botões
+        frame_botoes = ctk.CTkFrame(self, fg_color="transparent")
+        frame_botoes.pack(fill="x", padx=10, pady=(0, 10))
+        
+        btn_aplicar = ctk.CTkButton(frame_botoes, text="Aplicar", command=self._aplicar_configuracao)
+        btn_aplicar.pack(side="right", padx=5)
+        
+        btn_cancelar = ctk.CTkButton(frame_botoes, text="Cancelar", command=self.destroy)
+        btn_cancelar.pack(side="right", padx=5)
+
+    def _aplicar_configuracao(self):
+        """Coleta as colunas selecionadas e chama o callback."""
+        selected_columns = [col for col, var in self.checkbox_vars.items() if var.get()]
+        
+        if not selected_columns:
+            messagebox.showerror("Erro", "Pelo menos uma coluna deve ser selecionada.")
+            return
+
+        self.apply_callback(selected_columns)
+        self.destroy()
+        
+    def destroy(self):
+        self.grab_release()
+        super().destroy()
+# FIM: ColumnSettingsWindow
 
 class AppGUI(ctk.CTk):
     def __init__(self, api):
@@ -35,13 +85,14 @@ class AppGUI(ctk.CTk):
         self.app_state = load_state()
         self.tema_atual = self.app_state.get("theme", "dark_green")
         self._debounce_id = None
-        # CORREÇÃO: Adiciona ID para controle de limpeza do status bar
         self._status_clear_id = None 
         self.pagina_atual = 1
         self.is_fullscreen = False
         
-        # NOVO: Instancia o DataController e remove a gestão de dados da GUI
-        # CORREÇÃO: Injeta ITENS_POR_PAGINA no DataController
+        # NOVO: Carrega as colunas visíveis do estado
+        self.colunas_visiveis = self.app_state.get("colunas_visiveis", COLUNAS)
+        
+        # Instancia o DataController
         self.controller = DataController(COLUNAS, ITENS_POR_PAGINA) 
         
         # --- Controlo de Threads de Filtragem ---
@@ -62,7 +113,7 @@ class AppGUI(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.gerir_estado_widgets(False)
         
-        # NOVO: Configura o estado inicial do controller (com base no estado persistente)
+        # Configura o estado inicial do controller (com base no estado persistente)
         self.controller.coluna_ordenacao = self.app_state.get("coluna_ordenacao", "DATAHORA")
         self.controller.ordem_desc = self.app_state.get("ordem_desc", True)
         self.pagina_atual = self.app_state.get("pagina_atual", 1)
@@ -89,10 +140,14 @@ class AppGUI(ctk.CTk):
         self.btn_consultar = ctk.CTkButton(self.frame_top, text="Consultar", width=100, command=lambda: self.consultar_api_async())
         self.btn_consultar.pack(side="left", padx=5)
 
-        # NOVO CÓDIGO: Botão de Refresh
+        # ADICIONADO: Botão de Refresh
         self.btn_refresh = ctk.CTkButton(self.frame_top, text="Refresh", width=100, command=self.refresh_data_async)
         self.btn_refresh.pack(side="left", padx=5)
-        # FIM NOVO CÓDIGO
+
+        # ADICIONADO: Botão de Configuração de Colunas
+        self.btn_config_colunas = ctk.CTkButton(self.frame_top, text="Colunas", width=100, command=self.abrir_configuracao_colunas)
+        self.btn_config_colunas.pack(side="left", padx=15)
+        # FIM ADIÇÕES
         
         self.btn_alternar_tema = ctk.CTkButton(self.frame_top, text="Alternar Tema", command=self.alternar_tema)
         self.btn_alternar_tema.pack(side="right", padx=5)
@@ -135,7 +190,9 @@ class AppGUI(ctk.CTk):
         self.frame_table.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
         self.frame_table.grid_rowconfigure(0, weight=1)
         self.frame_table.grid_columnconfigure(0, weight=1)
-        self.tabela = Tabela(self, COLUNAS, on_sort_command=self.ordenar_por_coluna)
+        
+        # ALTERAÇÃO: Tabela recebe COLUNAS (completas) e self.colunas_visiveis (estado inicial)
+        self.tabela = Tabela(self, COLUNAS, self.colunas_visiveis, on_sort_command=self.ordenar_por_coluna)
         self.tabela.grid(in_=self.frame_table, row=0, column=0, sticky="nsew")
 
         # --- Frame Inferior (Paginação e Exportação) ---
@@ -176,8 +233,27 @@ class AppGUI(ctk.CTk):
             self.entry_data_inicio, self.entry_data_fim,
             self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, 
             self.btn_excel, self.btn_csv,
-            self.btn_refresh  # ADICIONADO: Botão de refresh à lista de widgets
+            self.btn_refresh,
+            self.btn_config_colunas # ADICIONADO
         ]
+    
+    # --- Funções de Configuração de Colunas ---
+
+    def abrir_configuracao_colunas(self):
+        """Abre a janela modal para o utilizador configurar as colunas visíveis."""
+        ColumnSettingsWindow(self, COLUNAS, self.colunas_visiveis, self.aplicar_novas_colunas)
+
+    def aplicar_novas_colunas(self, novas_colunas_visiveis):
+        """Callback para atualizar as colunas visíveis após a janela de configuração."""
+        self.colunas_visiveis = novas_colunas_visiveis
+        
+        # 1. Reconstroi a Treeview com as novas colunas
+        self.tabela.reconstruir_colunas(self.colunas_visiveis, self.ordenar_por_coluna)
+        
+        # 2. Re-renderiza os dados para garantir que a ordenação e paginação se adaptam
+        self.renderizar_dados()
+        
+        self.update_status(f"Colunas atualizadas. Visíveis: {len(novas_colunas_visiveis)}/{len(COLUNAS)}.")
     
     # --- Funções de Tela Cheia, _handle_date_validation, _reset_date_border (mantidas) ---
     def toggle_fullscreen(self, event=None):
@@ -334,14 +410,14 @@ class AppGUI(ctk.CTk):
         total_paginas = self.controller.total_paginas
         self.label_pagina.configure(text=f"Página {self.pagina_atual} / {total_paginas} (Total: {total_registos})")
 
-    # --- Funções de Carga de Dados e API (Melhorias no Tratamento de Erros) ---
+    # --- Funções de Carga de Dados e API ---
     def carregar_dados_iniciais_com_cache(self, is_auto_refresh=False):
         try:
             if not is_auto_refresh:
                 self.after(0, lambda: self.update_status("A carregar dados do cache..."))
                 self.after(0, lambda: self.tabela.mostrar_mensagem("A carregar..."))
                 
-                # NOVO: Carrega no controller
+                # Carrega no controller
                 dados_iniciais = self.api.buscar_todos(force_refresh=False)
                 if dados_iniciais:
                     self.controller.dados_completos = dados_iniciais
@@ -376,19 +452,13 @@ class AppGUI(ctk.CTk):
     def consultar_api_async(self):
         threading.Thread(target=self.consultar_api, daemon=True).start()
 
-    # NOVO MÉTODO: Função assíncrona para o botão Refresh
+    # ADICIONADO: Função assíncrona para o botão Refresh
     def refresh_data_async(self):
-        """
-        Inicia o carregamento e atualização de dados forçada da API.
-        Desativa os widgets e executa a busca numa thread separada.
-        """
-        # Desativa os widgets para evitar interações durante a busca
+        """Inicia o carregamento e atualização de dados forçada da API."""
         self.gerir_estado_widgets(False) 
         self.update_status("A forçar atualização de dados da API...")
-        # Inicia o processo de carregamento que buscará dados frescos (force_refresh=True)
-        # e reabilitará a GUI no bloco 'finally' de carregar_dados_iniciais_com_cache.
         threading.Thread(target=self.carregar_dados_iniciais_com_cache, daemon=True).start()
-    # FIM NOVO MÉTODO
+    # FIM ADIÇÃO
 
     def consultar_api(self):
         id_msg = self.entry_id.get().strip()
@@ -403,12 +473,10 @@ class AppGUI(ctk.CTk):
             # Garante que a entrada é tratada como número antes de enviar à API
             dados = self.api.consultar(id_msg)
             
-            # NOVO: Define os dados no Controller
             self.controller.dados_completos = dados 
             
             self.after(0, self.renderizar_dados)
             
-            # CORREÇÃO: Feedback claro se não houver registos
             if not dados:
                  self.after(0, lambda: self.update_status(f"ID {id_msg} consultado. Nenhum registo encontrado.", clear_after_ms=5000))
             else:
@@ -462,7 +530,9 @@ class AppGUI(ctk.CTk):
     def on_closing(self):
         self.app_state["theme"] = self.tema_atual
         self.app_state["geometry"] = self.geometry()
-        # NOVO: Salva o estado de ordenação e paginação do Controller
+        # NOVO: Salva a lista de colunas visíveis
+        self.app_state["colunas_visiveis"] = self.colunas_visiveis 
+        # Salva o estado de ordenação e paginação do Controller
         self.app_state["coluna_ordenacao"] = self.controller.coluna_ordenacao
         self.app_state["ordem_desc"] = self.controller.ordem_desc
         self.app_state["pagina_atual"] = self.pagina_atual
@@ -514,7 +584,8 @@ class AppGUI(ctk.CTk):
             self.btn_consultar, self.btn_csv, self.btn_excel, self.btn_alternar_tema, 
             self.btn_primeira, self.btn_anterior, self.btn_proximo, self.btn_ultima, 
             self.btn_limpar_filtro,
-            self.btn_refresh # ADICIONADO: Aplica o tema ao novo botão
+            self.btn_refresh,
+            self.btn_config_colunas # ADICIONADO
         ]
         entries = [self.entry_id, self.entry_filtro, self.entry_data_inicio, self.entry_data_fim]
         labels = [self.label_id, self.label_filtro, self.label_pagina, self.label_data_inicio, self.label_data_fim]

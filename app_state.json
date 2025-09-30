@@ -1,7 +1,15 @@
 {
     "theme": "dark_green",
-    "geometry": "1366x745+0+0",
-    "coluna_ordenacao": "DATAHORA",
+    "geometry": "1458x878+1672+19",
+    "coluna_ordenacao": "PLACA",
     "ordem_desc": true,
-    "pagina_atual": 1
+    "pagina_atual": 1,
+    "colunas_visiveis": [
+        "DATAHORA",
+        "IDMENSAGEM",
+        "LATITUDE",
+        "LONGITUDE",
+        "PLACA",
+        "TrackID"
+    ]
 }

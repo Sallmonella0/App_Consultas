@@ -1,9 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 
+# Define a raiz do projeto (C:\App_Consultas)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 a = Analysis(
-    ['main.py'],
-    pathex=[],
+    ['main.py'],  # CORREÇÃO: Colocamos SÓ o nome do script (sem o "src/")
+    pathex=[os.path.join(ROOT_DIR, 'src')], # CORREÇÃO: Dizemos ao PyInstaller que procure em 'C:\App_Consultas\src'
     binaries=[],
     datas=[],
     hiddenimports=[],
