@@ -994,7 +994,7 @@ class AppGUI(ctk.CTk):
         self.last_updated_label.configure(text_color=cores["fg"])
         self.menu_frame.configure(fg_color=cores["alt_bg"]) 
         
-        # Aplica tema aos botões de navegação
+        # Aplica tema aos botões de navegaçã
         for name, btn in self.navigation_buttons.items():
              btn.configure(fg_color=cores["button_bg"], hover_color=cores["button_hover"], text_color=cores["fg"])
         
