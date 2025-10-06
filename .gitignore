@@ -1,0 +1,29 @@
+# .gitignore aprimorado
+# Excluir variáveis de ambiente e arquivos de configuração sensíveis
+.env
+settings.ini
+
+# Excluir banco de dados de cache
+cache.db
+*.sqlite
+
+# Excluir arquivos de pacotes Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Excluir arquivos do PyInstaller/Build
+dist/
+build/
+*.spec
+
+# Excluir logs
+*.log
+
+# Excluir arquivos do IDE (ex: VS Code)
+.vscode/
+
+# Excluir arquivos do sistema
+.DS_Store
