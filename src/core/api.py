@@ -6,7 +6,6 @@ from src.core.cache import CacheManager
 from src.core.exceptions import APIConnectionError, APIAuthError, APIClientError, APIServerError, APIResponseError, ConsultaAPIException # NOVO: Importa exceções customizadas
 
 def sanitizar_dados(data):
-# ... (restante da função sanitizar_dados) ...
     if not isinstance(data, list): return []
     dados_limpos = []
     for item in data:
@@ -14,7 +13,7 @@ def sanitizar_dados(data):
             # Garante que DATAHORA existe
             if 'DATAHORA' not in item: item['DATAHORA'] = None
             
-            # NOVO: Sanitização robusta para IDMENSAGEM (garante que seja int ou None)
+            # Sanitização robusta para IDMENSAGEM (garante que seja int ou None)
             id_msg = item.get('IDMENSAGEM')
             if id_msg is not None:
                 try:
@@ -36,11 +35,12 @@ class ConsultaAPI:
         logging.info("Instância de ConsultaAPI criada.")
         
     def _fazer_requisicao(self, payload):
-# ... (restante da função _fazer_requisicao) ...
+        logging.debug(f"Payload enviado: {payload}")
         try:
+            # O timeout de 15 segundos foi especificado
             response = requests.post(self.base_url, auth=self.auth, json=payload, timeout=15)
             
-            # CORREÇÃO: Tratamento de exceções mais detalhado (Error 2)
+            # Tratamento de exceções detalhado
             if response.status_code == 401:
                 raise APIAuthError()
             elif 400 <= response.status_code < 500:
@@ -72,9 +72,13 @@ class ConsultaAPI:
             raise APIResponseError("Resposta da API não é um JSON válido.")
         except ConsultaAPIException:
             raise # Lança as exceções customizadas já capturadas acima
+        except Exception as e:
+            # Captura exceções genéricas (última linha de defesa)
+            logging.error(f"Erro inesperado durante a requisição: {e}")
+            raise ConsultaAPIException(f"Erro inesperado: {e}")
             
     def buscar_todos(self, force_refresh=False):
-# ... (restante da função buscar_todos) ...
+        # Lógica de cache e busca de todos os dados
         if not force_refresh:
             cached_data = self.cache_manager.get_cached_data() 
             if cached_data:
@@ -90,13 +94,24 @@ class ConsultaAPI:
         return fresh_data
         
     def consultar(self, id_mensagem):
-        # CORREÇÃO: Remoção da validação redundante 'or not id_mensagem.isdigit()'.
-        # A GUI é responsável por garantir que o ID seja um número válido antes de chamar.
+        # Consulta por IDMENSAGEM (usado pela ConsultaScreen)
         if not id_mensagem: return [] 
         
         logging.info(f"Consultando API pelo IDMENSAGEM: {id_mensagem}")
         
-        # O int() levantará um ValueError se a entrada for inválida (ex: 'abc'), 
-        # mas a GUI deve lidar com isso antes.
+        # A GUI garante que o ID seja um número.
         payload = {"IDMENSAGEM": int(id_mensagem)} 
+        return self._fazer_requisicao(payload)
+
+    def consultar_by_trackid(self, track_id):
+        """
+        Consulta a API pelo TrackID (usado para monitoramento).
+        """
+        if not track_id: return [] 
+        
+        logging.info(f"Consultando API pelo TrackID: {track_id}")
+        
+        # O TrackID é tipicamente uma string.
+        # NOTE: Assumimos que a API subjacente aceita 'TrackID' no payload para esta consulta.
+        payload = {"TrackID": track_id} 
         return self._fazer_requisicao(payload)
