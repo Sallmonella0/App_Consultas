@@ -6,7 +6,7 @@ import logging
 # --- CORREÇÃO: Remoção de importações da GUI e injeção de dependências ---
 try:
     # Nova importação do utilitário de ordenação (movido de src/gui/tabela.py)
-    from src.utils.data_utils import chave_de_ordenacao_segura 
+    from src.utils.data_utils import chave_de_ordenacao_segura
     # ITENS_POR_PAGINA foi removido, agora é injetado.
     from src.utils.datetime_utils import parse_api_datetime_to_date
 except ImportError as e:
@@ -14,18 +14,20 @@ except ImportError as e:
     # Fallbacks para garantir que a classe é funcional
     # Fallback para chave_de_ordenacao_segura (simples)
     def chave_de_ordenacao_segura(item, coluna): return item.get(coluna)
-    ITENS_POR_PAGINA_FALLBACK = 50 # Definição de fallback para itens por página
+    # CORREÇÃO: Valor de fallback alinhado com settings_manager.py
+    ITENS_POR_PAGINA_FALLBACK = 100
     # Fallback para parse_api_datetime_to_date
-    def parse_api_datetime_to_date(dt_str): 
-        if dt_str: 
+    def parse_api_datetime_to_date(dt_str):
+        if dt_str:
             try: return datetime.strptime(dt_str.split(' ')[0], '%Y-%m-%d').date()
             except: return None
         return None
 # ----------------------------------------------------------------------------
 
 # Define um fallback simples para itens por página caso o import acima falhe
+# CORREÇÃO: Valor de fallback alinhado com settings_manager.py
 if 'ITENS_POR_PAGINA_FALLBACK' not in locals():
-    ITENS_POR_PAGINA_FALLBACK = 50 
+    ITENS_POR_PAGINA_FALLBACK = 100
 
 class DataController:
     """
@@ -64,15 +66,15 @@ class DataController:
         """Define os filtros de data e valida o formato (se a UI falhar)."""
         self.data_inicio_filtro = None
         self.data_fim_filtro_exclusiva = None
-        
+
         try:
             if data_inicio_str:
                 self.data_inicio_filtro = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
-            
+
             if data_fim_str:
                 data_fim_date = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
                 # O limite superior é o dia seguinte para ser inclusivo
-                self.data_fim_filtro_exclusiva = data_fim_date + timedelta(days=1) 
+                self.data_fim_filtro_exclusiva = data_fim_date + timedelta(days=1)
         except ValueError:
             logging.warning("Tentativa de definir filtro de data com formato inválido. Revertendo para None.")
             raise # Sinaliza para a UI que a data é inválida
@@ -88,15 +90,15 @@ class DataController:
 
     def aplicar_filtro(self, re_sort_only=False):
         """Aplica os filtros atuais à lista de dados completos e reordena."""
-        # 1. Filtragem 
+        # 1. Filtragem
         if not re_sort_only:
             dados_filtrados = self._dados_completos
-            
+
             # 1.1 Filtro de Texto
             if self.termo_filtro:
                 if self.coluna_filtro == "TODAS":
                     dados_filtrados = [
-                        item for item in dados_filtrados 
+                        item for item in dados_filtrados
                         if self.termo_filtro in ' '.join(map(str, item.values())).lower()
                     ]
                 else:
@@ -106,19 +108,19 @@ class DataController:
             if self.data_inicio_filtro or self.data_fim_filtro_exclusiva:
                 def filter_date(item):
                     item_date = parse_api_datetime_to_date(item.get("DATAHORA"))
-                    if not item_date: return False 
-                    
+                    if not item_date: return False
+
                     if self.data_inicio_filtro and item_date < self.data_inicio_filtro: return False
                     if self.data_fim_filtro_exclusiva and item_date >= self.data_fim_filtro_exclusiva: return False
                     return True
-                
+
                 dados_filtrados = [item for item in dados_filtrados if filter_date(item)]
-            
+
             self._dados_filtrados = dados_filtrados
 
         # 2. Ordenação
-        self._dados_filtrados = sorted(self._dados_filtrados, 
-                                       key=lambda item: chave_de_ordenacao_segura(item, self.coluna_ordenacao), 
+        self._dados_filtrados = sorted(self._dados_filtrados,
+                                       key=lambda item: chave_de_ordenacao_segura(item, self.coluna_ordenacao),
                                        reverse=self.ordem_desc)
 
     # --- Propriedades e Métodos de Paginação ---
@@ -135,17 +137,17 @@ class DataController:
     def get_dados_pagina(self, numero_pagina):
         """Retorna os dados para a página solicitada."""
         total_paginas = self.total_paginas
-        
+
         # Garante que o número da página é válido
         numero_pagina = max(1, min(numero_pagina, total_paginas))
-        
+
         # CORREÇÃO: Usa self.itens_por_pagina (injetado)
         inicio = (numero_pagina - 1) * self.itens_por_pagina
         fim = inicio + self.itens_por_pagina
-        
+
         # Retorna o número da página corrigido e os dados
         return numero_pagina, self._dados_filtrados[inicio:fim]
-        
+
     def get_dados_para_exportar(self, linhas_selecionadas=None):
         """Retorna os dados filtrados ou apenas os selecionados para exportação."""
         if linhas_selecionadas:

@@ -1,6 +1,8 @@
 # src/utils/data_utils.py
 from datetime import datetime
 import logging
+# CORREÇÃO: Importa a função de parsing unificada
+from src.utils.datetime_utils import parse_api_datetime_to_date
 
 def chave_de_ordenacao_segura(item, coluna):
     """
@@ -15,14 +17,12 @@ def chave_de_ordenacao_segura(item, coluna):
     valor = item.get(coluna)
 
     if coluna == "DATAHORA":
-        if isinstance(valor, str) and valor.strip():
-            try:
-                # Trata o formato esperado da API: 'AAAA-MM-DDTHH:MM:SS'
-                return datetime.strptime(valor, '%Y-%m-%dT%H:%M:%S')
-            except (ValueError, TypeError):
-                logging.warning(f"Formato de data inválido: '{valor}'. Esperado 'AAAA-MM-DDTHH:MM:SS'.")
-                return datetime.min
-        return datetime.min
-    
+        # CORREÇÃO: Usa a função de parsing centralizada para consistência.
+        # `parse_api_datetime_to_date` já retorna um objeto `date` ou `None`.
+        parsed_date = parse_api_datetime_to_date(valor)
+        # Retorna uma data mínima se o parsing falhar, garantindo que valores inválidos
+        # fiquem no início ou no fim da ordenação de forma consistente.
+        return parsed_date if parsed_date else datetime.min
+
     # Ordena como string (case-insensitive) para todos os outros campos
     return str(valor or "").lower()
