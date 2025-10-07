@@ -1,10 +1,6 @@
 {
     "theme": "dark_green",
-    "geometry": "1458x878+1532+62",
-    "coluna_ordenacao": "PLACA",
-    "ordem_desc": true,
-    "pagina_atual": 1,
-    "colunas_visiveis": [
+    "visible_columns": [
         "DATAHORA",
         "IDMENSAGEM",
         "LATITUDE",
@@ -12,5 +8,18 @@
         "PLACA",
         "TrackID"
     ],
-    "menu_expanded": true
+    "geometry": [
+        48,
+        44,
+        1300,
+        700
+    ],
+    "column_widths": [
+        208,
+        208,
+        208,
+        207,
+        207,
+        207
+    ]
 }
