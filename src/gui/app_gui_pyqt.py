@@ -27,96 +27,115 @@ from src.utils.settings_manager import ITENS_POR_PAGINA
 from src.utils.state_manager import load_state, save_state
 from src.utils.datetime_utils import is_valid_ui_date
 
-# --- TEMAS ORIGINAIS RESTAURADOS E ADAPTADOS ---
+# --- NOVOS TEMAS "TECH DARK / LIGHT" ---
 THEMES = {
-    "dark_green": """
+    "tech_dark": """
         QWidget {
-            background-color: #111111; color: #E0FFE0; font-size: 15px; border: none;
+            background-color: #1A1A1A; color: #BDBDBD; font-size: 15px; border: none;
         }
-        QMainWindow, QDialog { background-color: #111111; }
+        QMainWindow, QDialog { background-color: #1A1A1A; }
         QGroupBox { 
-            background-color: #1C1C1C; 
+            background-color: #2C2C2C; 
             border-radius: 8px; 
-            margin-top: 10px; padding: 10px;
+            margin-top: 10px;
+            padding: 10px;
         }
         QGroupBox::title { 
             subcontrol-origin: margin; subcontrol-position: top left; 
-            padding: 0 10px; font-weight: bold;
+            padding: 0 10px;
+            font-weight: bold;
+            color: #00C853;
         }
         
         QTableWidget {
-            background-color: #1C1C1C; alternate-background-color: #222222;
-            gridline-color: #444444; color: #E0FFE0;
+            background-color: #2C2C2C; alternate-background-color: #333333;
+            gridline-color: #444444; color: #BDBDBD;
         }
         QTableWidget::item { border-bottom: 1px solid #444444; padding: 5px; }
-        QTableWidget::item:selected { background-color: #66FF66; color: #111111; }
+        QTableWidget::item:selected { background-color: #3498db; color: #FFFFFF; }
 
         QHeaderView::section {
-            background-color: #33CC33; color: #111111; padding: 5px; 
+            background-color: #00C853; color: #000000; padding: 5px; 
             border: none; font-weight: bold;
         }
         QPushButton {
-            background-color: #33CC33; color: #111111; padding: 8px 16px; 
+            background-color: #444444; color: #FFFFFF; padding: 8px 16px; 
             border-radius: 4px; font-weight: bold;
         }
-        QPushButton:hover { background-color: #22AA22; }
+        QPushButton:hover { background-color: #555555; }
+        QPushButton:pressed { background-color: #333333; }
         
+        QPushButton#PrimaryAction {
+             background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #00E676, stop:1 #00C853);
+             color: #000000; border-bottom: 2px solid #00B04A;
+        }
+        QPushButton#PrimaryAction:hover { background-color: #00FF84; }
+        QPushButton#PrimaryAction:pressed { background-color: #00C853; border-bottom: none; }
+
         QLineEdit, QComboBox, QDateEdit {
-            background-color: #222222; border: 1px solid #444;
-            padding: 6px; border-radius: 4px; color: #E0FFE0;
+            background-color: #1A1A1A; border: 1px solid #444;
+            padding: 6px; border-radius: 4px;
         }
         QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
-            border: 1px solid #6FAF6F;
+            border: 1px solid #00C853;
         }
         
-        QMenuBar { background-color: #1C1C1C; }
-        QMenuBar::item:selected { background: #33CC33; color: #111111; }
-        QMenu { background-color: #1C1C1C; border: 1px solid #444; }
-        QMenu::item:selected { background-color: #33CC33; color: #111111; }
+        QMenuBar { background-color: #2C2C2C; }
+        QMenuBar::item:selected { background: #00C853; color: #000000; }
+        QMenu { background-color: #2C2C2C; border: 1px solid #444; }
+        QMenu::item:selected { background-color: #00C853; color: #000000; }
     """,
-    "light_green": """
+    "tech_light": """
         QWidget {
-            background-color: #E8E8E8; color: #111111; font-size: 15px; border: none;
+            background-color: #F3F4F6; color: #1A1A1A; font-size: 15px; border: none;
         }
-        QMainWindow, QDialog { background-color: #E8E8E8; }
+        QMainWindow, QDialog { background-color: #F3F4F6; }
         QGroupBox { 
             background-color: #FFFFFF;
             border-radius: 8px; margin-top: 10px; padding: 10px;
         }
         QGroupBox::title { 
             subcontrol-origin: margin; subcontrol-position: top left; 
-            padding: 0 10px; font-weight: bold;
+            padding: 0 10px; font-weight: bold; color: #43A047;
         }
         
         QTableWidget {
-            background-color: #FFFFFF; alternate-background-color: #F0F0F0;
-            gridline-color: #EAEAEA; color: #111111;
+            background-color: #FFFFFF; alternate-background-color: #F8F9F9;
+            gridline-color: #EAEAEA; color: #1A1A1A;
         }
         QTableWidget::item { border-bottom: 1px solid #EAEAEA; padding: 5px; }
-        QTableWidget::item:selected { background-color: #80EF80; color: #000000; }
+        QTableWidget::item:selected { background-color: #3498db; color: #FFFFFF; }
 
         QHeaderView::section {
-            background-color: #80EF80; color: #000000; padding: 5px; 
+            background-color: #4CAF50; color: #FFFFFF; padding: 5px; 
             border: none; font-weight: bold;
         }
         QPushButton {
-            background-color: #80EF80; color: #000000; padding: 8px 16px; 
+            background-color: #E0E0E0; color: #1A1A1A; padding: 8px 16px; 
             border-radius: 4px; font-weight: bold;
         }
-        QPushButton:hover { background-color: #6EDB6E; }
+        QPushButton:hover { background-color: #E5E5E5; }
+        QPushButton:pressed { background-color: #D0D0D0; }
+        
+        QPushButton#PrimaryAction {
+             background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4CAF50, stop:1 #43A047);
+             color: #FFFFFF; border-bottom: 2px solid #3B8E3F;
+        }
+        QPushButton#PrimaryAction:hover { background-color: #5CDA61; }
+        QPushButton#PrimaryAction:pressed { background-color: #43A047; border-bottom: none; }
         
         QLineEdit, QComboBox, QDateEdit {
             background-color: #FFFFFF; border: 1px solid #D0D0D0;
             padding: 6px; border-radius: 4px;
         }
         QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
-            border: 1px solid #A0CFA0;
+            border: 1px solid #4CAF50;
         }
         
         QMenuBar { background-color: #FFFFFF; }
-        QMenuBar::item:selected { background: #80EF80; color: #000000; }
+        QMenuBar::item:selected { background: #4CAF50; color: #FFFFFF; }
         QMenu { background-color: #FFFFFF; border: 1px solid #D0D0D0; }
-        QMenu::item:selected { background-color: #80EF80; color: #000000; }
+        QMenu::item:selected { background: #4CAF50; color: #FFFFFF; }
     """
 }
 
@@ -211,6 +230,7 @@ class ConsultaScreen(QWidget):
         self.entry_id.setPlaceholderText("IDMENSAGEM")
         self.entry_id.returnPressed.connect(self.main_app.consultar_api_async)
         self.btn_consultar = QPushButton("Consultar")
+        self.btn_consultar.setObjectName("PrimaryAction")
         self.btn_consultar.clicked.connect(self.main_app.consultar_api_async)
         self.btn_refresh = QPushButton("Atualizar")
         self.btn_refresh.clicked.connect(self.main_app.refresh_data_async)
@@ -222,20 +242,21 @@ class ConsultaScreen(QWidget):
         self.combo_coluna.addItems(["TODAS"] + COLUNAS)
         self.combo_coluna.setCurrentText("PLACA")
         self.btn_aplicar_filtros = QPushButton("Aplicar Filtros")
+        self.btn_aplicar_filtros.setObjectName("PrimaryAction")
         self.btn_aplicar_filtros.clicked.connect(self.main_app.aplicar_filtro)
         self.btn_limpar_filtros = QPushButton("Limpar Filtros")
         self.btn_limpar_filtros.clicked.connect(self.main_app.limpar_filtros)
         controls_layout.addWidget(QLabel("Busca por ID:"), 0, 0)
-        controls_layout.addWidget(self.entry_id, 0, 1, 1, 2)
-        controls_layout.addWidget(self.btn_consultar, 0, 3)
-        controls_layout.addWidget(self.btn_refresh, 0, 4)
-        controls_layout.addWidget(self.btn_config_colunas, 0, 5)
+        controls_layout.addWidget(self.entry_id, 0, 1)
+        controls_layout.addWidget(self.btn_consultar, 0, 2)
+        controls_layout.addWidget(self.btn_refresh, 0, 3)
+        controls_layout.addWidget(self.btn_config_colunas, 0, 4)
         controls_layout.addWidget(QLabel("Filtro Rápido:"), 1, 0)
         controls_layout.addWidget(self.entry_filtro, 1, 1)
         controls_layout.addWidget(self.combo_coluna, 1, 2)
         controls_layout.addWidget(self.btn_aplicar_filtros, 1, 3)
         controls_layout.addWidget(self.btn_limpar_filtros, 1, 4)
-        controls_layout.setColumnStretch(6, 1)
+        controls_layout.setColumnStretch(5, 1)
         self.tabela = QTableWidget()
         self.tabela.setColumnCount(len(COLUNAS))
         self.tabela.setHorizontalHeaderLabels(COLUNAS)
@@ -420,7 +441,7 @@ class DashboardScreen(QWidget):
             sizes = [1]
             labels = ['Nenhum cliente']
             colors = ['#444444']
-        is_dark = self.main_app.tema_atual == "dark_green"
+        is_dark = self.main_app.tema_atual == "tech_dark"
         text_color = '#FFFFFF' if is_dark else '#1A1A1A'
         self.chart_canvas.axes.pie(
             sizes, labels=labels, autopct='%1.1f%%', startangle=90,
@@ -437,9 +458,9 @@ class AppGUI(QMainWindow):
         super().__init__()
         self.api = api
         self.app_state = load_state()
-        self.tema_atual = self.app_state.get("theme", "dark_green")
+        self.tema_atual = self.app_state.get("theme", "tech_dark")
         if self.tema_atual not in THEMES:
-            self.tema_atual = "dark_green"
+            self.tema_atual = "tech_dark"
         self.visible_columns = self.app_state.get("visible_columns", COLUNAS[:])
         self.controller = DataController(COLUNAS, ITENS_POR_PAGINA)
         self.exportar = Exportar(self, self.controller)
@@ -495,10 +516,10 @@ class AppGUI(QMainWindow):
         prefs_menu = menu_bar.addMenu("Preferências")
         theme_menu = QMenu("Tema", self)
         prefs_menu.addMenu(theme_menu)
-        self.dark_action = QAction("Dark Green", self, checkable=True)
-        self.dark_action.triggered.connect(lambda: self.set_theme("dark_green"))
-        self.light_action = QAction("Light Green", self, checkable=True)
-        self.light_action.triggered.connect(lambda: self.set_theme("light_green"))
+        self.dark_action = QAction("Tech Dark", self, checkable=True)
+        self.dark_action.triggered.connect(lambda: self.set_theme("tech_dark"))
+        self.light_action = QAction("Tech Light", self, checkable=True)
+        self.light_action.triggered.connect(lambda: self.set_theme("tech_light"))
         theme_menu.addAction(self.dark_action)
         theme_menu.addAction(self.light_action)
 
@@ -524,8 +545,8 @@ class AppGUI(QMainWindow):
 
     def aplicar_tema_completo(self):
         self.setStyleSheet(THEMES[self.tema_atual])
-        self.dark_action.setChecked(self.tema_atual == "dark_green")
-        self.light_action.setChecked(self.tema_atual == "light_green")
+        self.dark_action.setChecked(self.tema_atual == "tech_dark")
+        self.light_action.setChecked(self.tema_atual == "tech_light")
         for dialog in self.findChildren(QDialog):
             dialog.setStyleSheet(THEMES[self.tema_atual])
         self.frames["Dashboard"].update_display()

@@ -1,3 +1,5 @@
+# src/core/data_controller.py
+
 import logging
 from datetime import datetime
 import math
@@ -24,6 +26,8 @@ class DataController:
         # Estado de filtragem
         self.termo_filtro = ""
         self.coluna_filtro = "TODAS"
+        self.data_inicio_filtro = None
+        self.data_fim_filtro = None
         
         # Estado de paginação
         self.total_registos = 0
@@ -33,40 +37,60 @@ class DataController:
         """Define os parâmetros para o filtro de texto."""
         self.termo_filtro = termo.strip().lower() if termo else ""
         self.coluna_filtro = coluna
+
+    def set_filtro_data(self, data_inicio, data_fim):
+        """Define os parâmetros para o filtro de data."""
+        self.data_inicio_filtro = data_inicio
+        self.data_fim_filtro = data_fim
     
     def aplicar_filtro(self, re_sort_only=False):
         """
-        Aplica os filtros de texto aos dados.
+        Aplica os filtros de texto e data aos dados.
         Se re_sort_only for True, apenas reordena os dados já filtrados.
         """
         if not re_sort_only:
             dados_a_filtrar = self.dados_completos
             
-            # 1. Filtro por texto
+            # 1. Filtro por data
+            dados_filtrados_data = []
+            if self.data_inicio_filtro and self.data_fim_filtro:
+                for item in dados_a_filtrar:
+                    try:
+                        # Assumindo formato 'YYYY-MM-DD HH:MM:SS'
+                        data_item_str = item.get("DATAHORA", "").split(" ")[0]
+                        data_item = datetime.strptime(data_item_str, '%Y-%m-%d').date()
+                        if self.data_inicio_filtro <= data_item <= self.data_fim_filtro:
+                            dados_filtrados_data.append(item)
+                    except (ValueError, IndexError):
+                        continue # Ignora formatos de data inválidos
+            else:
+                dados_filtrados_data = dados_a_filtrar
+
+            # 2. Filtro por texto
             if self.termo_filtro:
                 if self.coluna_filtro == "TODAS":
                     dados_filtrados_texto = [
-                        item for item in dados_a_filtrar 
+                        item for item in dados_filtrados_data
                         if any(str(value).lower().find(self.termo_filtro) != -1 
                                for value in item.values())
                     ]
                 else:
                     dados_filtrados_texto = [
-                        item for item in dados_a_filtrar 
+                        item for item in dados_filtrados_data
                         if str(item.get(self.coluna_filtro, "")).lower().find(self.termo_filtro) != -1
                     ]
             else:
-                dados_filtrados_texto = dados_a_filtrar
+                dados_filtrados_texto = dados_filtrados_data
                 
             self.dados_filtrados = dados_filtrados_texto
         
-        # 2. Ordenação
+        # 3. Ordenação
         self.dados_filtrados.sort(
             key=lambda item: chave_de_ordenacao_segura(item, self.coluna_ordenacao),
             reverse=self.ordem_desc
         )
         
-        # 3. Atualizar contadores de paginação
+        # 4. Atualizar contadores de paginação
         self.total_registos = len(self.dados_filtrados)
         self.total_paginas = math.ceil(self.total_registos / self.itens_por_pagina) if self.total_registos > 0 else 1
 

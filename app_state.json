@@ -1,5 +1,5 @@
 {
-    "theme": "dark_green",
+    "theme": "tech_dark",
     "visible_columns": [
         "DATAHORA",
         "IDMENSAGEM",
@@ -9,8 +9,8 @@
         "TrackID"
     ],
     "geometry": [
-        48,
-        44,
+        1778,
+        100,
         1300,
         700
     ],
