@@ -27,286 +27,162 @@ from src.utils.settings_manager import ITENS_POR_PAGINA
 from src.utils.state_manager import load_state, save_state
 from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_date
 
-# --- NOVOS TEMAS "TECH DARK / LIGHT" ---
-THEMES = {
-    "tech_dark": """
-        QWidget {
-            background-color: #121212;
-            color: #E0E0E0;
-            font-size: 15px;
-            border: none;
-        }
-
-        QMainWindow, QDialog {
-            background-color: #121212;
-        }
-
-        QGroupBox {
-            background-color: #1E1E1E;
-            border-radius: 8px;
-            margin-top: 10px;
-            padding: 10px;
-        }
-
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            padding: 0 10px;
-            font-weight: bold;
-            color: #00E676;
-        }
-
-        QTableWidget {
-            background-color: #1E1E1E;
-            alternate-background-color: #2A2A2A;
-            gridline-color: #333;
-            color: #E0E0E0;
-        }
-
-        QTableWidget::item {
-            border-bottom: 1px solid #333;
-            padding: 5px;
-        }
-
-        QTableWidget::item:selected {
-            background-color: #00C853;
-            color: #000000;
-        }
-
-        QHeaderView::section {
-            background-color: #00E676;
-            color: #000000;
-            padding: 5px;
-            border: none;
-            font-weight: bold;
-        }
-
-        QPushButton {
-            background-color: #2C2C2C;
-            color: #FFFFFF;
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: 1px solid #3A3A3A;
-            font-weight: bold;
-        }
-
-        QPushButton:hover {
-            background-color: #3A3A3A;
-        }
-
-        QPushButton:pressed {
-            background-color: #1A1A1A;
-        }
-
-        /* Botões principais — como 'Ver na Tabela' */
-        QPushButton#PrimaryAction {
-            background-color: #00E676;
-            color: #0B0B0B;
-            border-radius: 6px;
-            border: 2px solid #00C853;
-            font-weight: bold;
-            padding: 8px 14px;
-        }
-
-        QPushButton#PrimaryAction:hover {
-            background-color: #00FF88;
-            border-color: #00E676;
-        }
-
-        QPushButton#PrimaryAction:pressed {
-            background-color: #00C853;
-            border-color: #009E47;
-        }
-
-        QLineEdit, QComboBox, QDateEdit {
-            background-color: #1A1A1A;
-            border: 1px solid #444;
-            padding: 6px;
-            border-radius: 4px;
-            color: #FFFFFF;
-        }
-
-        QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
-            border: 1px solid #00E676;
-        }
-
-        QMenuBar {
-            background-color: #1E1E1E;
-            color: #E0E0E0;
-        }
-
-        QMenuBar::item:selected {
-            background: #00E676;
-            color: #000000;
-        }
-
-        QMenu {
-            background-color: #1E1E1E;
-            border: 1px solid #333;
-        }
-
-        QMenu::item:selected {
-            background-color: #00E676;
-            color: #000000;
-        }
-
-        QScrollBar:vertical {
-            background: #1A1A1A;
-            width: 12px;
-            margin: 0;
-        }
-
-        QScrollBar::handle:vertical {
-            background: #00E676;
-            border-radius: 6px;
-            min-height: 20px;
-        }
-
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-            background: none;
-        }
-    """,
-
-    "tech_light": """
-        QWidget {
-            background-color: #ECEFF1;
-            color: #1C1C1C;
-            font-size: 15px;
-            border: none;
-        }
-
-        QMainWindow, QDialog {
-            background-color: #ECEFF1;
-        }
-
-        QGroupBox {
-            background-color: #F7F9FA;
-            border-radius: 8px;
-            margin-top: 10px;
-            padding: 10px;
-        }
-
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            padding: 0 10px;
-            font-weight: bold;
-            color: #43A047;
-        }
-
-        QTableWidget {
-            background-color: #F7F9FA;
-            alternate-background-color: #E0E4E7;
-            gridline-color: #B0BEC5;
-            color: #1A1A1A;
-        }
-
-        QTableWidget::item {
-            border-bottom: 1px solid #C0C9CC;
-            padding: 5px;
-        }
-
-        QTableWidget::item:selected {
-            background-color: #43A047;
-            color: #FFFFFF;
-        }
-
-        QHeaderView::section {
-            background-color: #4CAF50;
-            color: #FFFFFF;
-            padding: 5px;
-            border: none;
-            font-weight: bold;
-        }
-
-        QPushButton {
-            background-color: #CFD8DC;
-            color: #1A1A1A;
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: 1px solid #B0BEC5;
-            font-weight: bold;
-        }
-
-        QPushButton:hover {
-            background-color: #BFC9CA;
-        }
-
-        QPushButton:pressed {
-            background-color: #AEB6BF;
-        }
-
-        /* Botões principais — como 'Ver na Tabela' */
-        QPushButton#PrimaryAction {
-            background-color: #43A047;
-            color: #FFFFFF;
-            border-radius: 6px;
-            border: 2px solid #388E3C;
-            font-weight: bold;
-            padding: 8px 14px;
-        }
-
-        QPushButton#PrimaryAction:hover {
-            background-color: #4CAF50;
-            border-color: #43A047;
-        }
-
-        QPushButton#PrimaryAction:pressed {
-            background-color: #388E3C;
-            border-color: #2E7D32;
-        }
-
-        QLineEdit, QComboBox, QDateEdit {
-            background-color: #FFFFFF;
-            border: 1px solid #B0BEC5;
-            padding: 6px;
-            border-radius: 4px;
-        }
-
-        QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
-            border: 1px solid #43A047;
-        }
-
-        QMenuBar {
-            background-color: #F7F9FA;
-            color: #1A1A1A;
-        }
-
-        QMenuBar::item:selected {
-            background: #43A047;
-            color: #FFFFFF;
-        }
-
-        QMenu {
-            background-color: #F7F9FA;
-            border: 1px solid #B0BEC5;
-        }
-
-        QMenu::item:selected {
-            background-color: #43A047;
-            color: #FFFFFF;
-        }
-
-        QScrollBar:vertical {
-            background: #E0E4E7;
-            width: 12px;
-            margin: 0;
-        }
-
-        QScrollBar::handle:vertical {
-            background: #43A047;
-            border-radius: 6px;
-            min-height: 20px;
-        }
-
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-            background: none;
-        }
-    """
+# --- NOVAS PALETAS DE CORES ---
+PALETTES = {
+    "dark_green": {
+        "bg": "#111111",
+        "alt_bg": "#1C1C1C",
+        "fg": "#D0F0C0",
+        "primary": "#33CC33",
+        "primary_dark": "#22AA22",
+        "primary_light": "#66FF66",
+        "selected_bg": "#33CC33",
+        "selected_fg": "#111111",
+        "entry_bg": "#222222",
+        "border": "#333333",
+        "text_main": "#E0E0E0",
+        "text_dark": "#000000",
+        "text_light": "#FFFFFF",
+    },
+    "light_green": {
+        "bg": "#F0F0F0",
+        "alt_bg": "#FFFFFF",
+        "fg": "#111111",
+        "primary": "#4CAF50",
+        "primary_dark": "#388E3C",
+        "primary_light": "#C8E6C9",
+        "selected_bg": "#4CAF50",
+        "selected_fg": "#FFFFFF",
+        "entry_bg": "#FFFFFF",
+        "border": "#B0BEC5",
+        "text_main": "#1A1A1A",
+        "text_dark": "#000000",
+        "text_light": "#FFFFFF",
+    }
 }
 
+# --- FUNÇÃO GERADORA DE TEMAS ---
+def generate_theme_qss(p):
+    """Gera uma string QSS a partir de uma paleta de cores."""
+    return f"""
+        QWidget {{
+            background-color: {p["bg"]};
+            color: {p["text_main"]};
+            font-size: 15px;
+            border: none;
+        }}
+        QMainWindow, QDialog {{
+            background-color: {p["bg"]};
+        }}
+        QGroupBox {{
+            background-color: {p["alt_bg"]};
+            border-radius: 8px;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid {p["border"]};
+        }}
+        QGroupBox::title {{
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 10px;
+            font-weight: bold;
+            color: {p["primary"]};
+        }}
+        QTableWidget {{
+            background-color: {p["alt_bg"]};
+            alternate-background-color: {p["bg"]};
+            gridline-color: {p["border"]};
+            color: {p["text_main"]};
+        }}
+        QTableWidget::item {{
+            border-bottom: 1px solid {p["border"]};
+            padding: 5px;
+        }}
+        QTableWidget::item:selected {{
+            background-color: {p["selected_bg"]};
+            color: {p["selected_fg"]};
+        }}
+        QHeaderView::section {{
+            background-color: {p["primary"]};
+            color: {p["text_dark"]};
+            padding: 5px;
+            border: none;
+            font-weight: bold;
+        }}
+        QPushButton {{
+            background-color: {p["entry_bg"]};
+            color: {p["text_main"]};
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid {p["border"]};
+            font-weight: bold;
+        }}
+        QPushButton:hover {{
+            background-color: {p["border"]};
+        }}
+        QPushButton:pressed {{
+            background-color: {p["bg"]};
+        }}
+        QPushButton#PrimaryAction {{
+            background-color: {p["primary"]};
+            color: {p["text_dark"]};
+            border-radius: 6px;
+            border: 2px solid {p["primary_dark"]};
+            font-weight: bold;
+            padding: 8px 14px;
+        }}
+        QPushButton#PrimaryAction:hover {{
+            background-color: {p["primary_light"]};
+        }}
+        QPushButton#PrimaryAction:pressed {{
+            background-color: {p["primary_dark"]};
+        }}
+        QLineEdit, QComboBox, QDateEdit {{
+            background-color: {p["entry_bg"]};
+            border: 1px solid {p["border"]};
+            padding: 6px;
+            border-radius: 4px;
+            color: {p["text_main"]};
+        }}
+        QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
+            border: 1px solid {p["primary"]};
+        }}
+        QMenuBar {{
+            background-color: {p["alt_bg"]};
+            color: {p["text_main"]};
+        }}
+        QMenuBar::item:selected {{
+            background: {p["primary"]};
+            color: {p["selected_fg"]};
+        }}
+        QMenu {{
+            background-color: {p["alt_bg"]};
+            border: 1px solid {p["border"]};
+        }}
+        QMenu::item:selected {{
+            background-color: {p["primary"]};
+            color: {p["selected_fg"]};
+        }}
+        QScrollBar:vertical {{
+            background: {p["bg"]};
+            width: 12px;
+            margin: 0;
+        }}
+        QScrollBar::handle:vertical {{
+            background: {p["primary"]};
+            border-radius: 6px;
+            min-height: 20px;
+        }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+            background: none;
+        }}
+    """
 
-
+# --- GERAÇÃO DOS TEMAS ---
+THEMES = {
+    "dark_green": generate_theme_qss(PALETTES["dark_green"]),
+    "light_green": generate_theme_qss(PALETTES["light_green"]),
+}
 
 # --- NOVOS WIDGETS E DIÁLOGOS ---
 class MplCanvas(FigureCanvas):
@@ -590,7 +466,6 @@ class ControleScreen(QWidget):
 
                 btn = QPushButton("Ver na Tabela")
                 btn.setObjectName("PrimaryAction")
-                btn.setFixedWidth(140)
                 btn.clicked.connect(lambda _, tid=track_id: self.main_app.show_in_table(tid))
 
                 card_layout.addWidget(icon)
@@ -598,58 +473,38 @@ class ControleScreen(QWidget):
                 card_layout.addWidget(btn)
 
                 card.setFrameShape(QFrame.Shape.StyledPanel)
-                card.setStyleSheet("border-radius: 10px; padding: 8px;")
                 self.scroll_layout.addWidget(card)
                 self.status_widgets[track_id] = {"card": card, "icon": icon, "label": label}
 
         # --- Atualização de status ---
         ok_count, error_count, no_signal_count = 0, 0, 0
-        is_dark = self.main_app.tema_atual == "tech_dark"
-
-        # Paleta por tema
-        palette_dark = {
-            "ok": "#00FF88",
-            "error": "#FF5252",
-            "no_signal": "#8E9BAA",
-            "pending": "#FFC107",
-            "card_bg": "#1E2226",
-            "border": "#2D3338",
-            "text": "#FFFFFF",
-        }
-        palette_light = {
-            "ok": "#43A047",
-            "error": "#E53935",
-            "no_signal": "#90A4AE",
-            "pending": "#FFB300",
-            "card_bg": "#FFFFFF",
-            "border": "#D9DEE2",
-            "text": "#1A1A1A",
-        }
-        colors = palette_dark if is_dark else palette_light
+        is_dark = self.main_app.tema_atual == "dark_green"
+        
+        palette = PALETTES[self.main_app.tema_atual]
 
         for track_id, status_info in client_status_ref.items():
             if track_id in self.status_widgets:
                 w = self.status_widgets[track_id]
                 status = status_info.get("status", "N/A")
                 message = status_info.get("message", "")
-                card_style = f"background-color: {colors['card_bg']}; border: 1px solid {colors['border']}; border-radius: 10px;"
+                card_style = f"background-color: {palette['alt_bg']}; border: 1px solid {palette['border']}; border-radius: 10px;"
 
                 if status == "OK":
-                    color = colors["ok"]
+                    color = palette['primary']
                     msg = f"<b>Latitude:</b> {status_info.get('latitude', 'N/A')}<br>" \
                           f"<b>Longitude:</b> {status_info.get('longitude', 'N/A')}<br>" \
                           f"<b>Data/Hora:</b> {status_info.get('datahora', 'N/A')}"
                     ok_count += 1
                 elif status == "ERRO":
-                    color = colors["error"]
+                    color = "#FF5252" # Cor de erro universal
                     msg = f"<b>ERRO:</b> {message}"
                     error_count += 1
                 elif status == "SEM REGISTRO RECENTE":
-                    color = colors["no_signal"]
+                    color = "#8E9BAA" # Cor de sem sinal universal
                     msg = f"<i>{message}</i>"
                     no_signal_count += 1
                 else:
-                    color = colors["pending"]
+                    color = "#FFC107" # Cor de pendente universal
                     msg = "<i>Aguardando atualização...</i>"
                     no_signal_count += 1
 
@@ -665,11 +520,12 @@ class ControleScreen(QWidget):
 
     def update_chart(self, ok, error, no_signal):
         self.chart_canvas.axes.clear()
-        is_dark = self.main_app.tema_atual == "tech_dark"
+        palette = PALETTES[self.main_app.tema_atual]
+        
         theme_colors = {
-            "ok": "#00FF88" if is_dark else "#43A047",
-            "error": "#FF5252" if is_dark else "#E53935",
-            "no_signal": "#8E9BAA" if is_dark else "#90A4AE",
+            "ok": palette['primary'],
+            "error": "#FF5252",
+            "no_signal": "#8E9BAA",
         }
         labels, sizes, colors = [], [], []
         if ok > 0:
@@ -679,9 +535,9 @@ class ControleScreen(QWidget):
         if no_signal > 0:
             labels.append(f"Sem Sinal ({no_signal})"); sizes.append(no_signal); colors.append(theme_colors["no_signal"])
         if not sizes:
-            sizes, labels, colors = [1], ["Nenhum cliente"], ["#444444" if is_dark else "#CCCCCC"]
+            sizes, labels, colors = [1], ["Nenhum cliente"], [palette['border']]
 
-        text_color = "#FFFFFF" if is_dark else "#1A1A1A"
+        text_color = palette['text_main']
         self.chart_canvas.axes.pie(
             sizes,
             labels=labels,
@@ -701,9 +557,9 @@ class AppGUI(QMainWindow):
         super().__init__()
         self.api = api
         self.app_state = load_state()
-        self.tema_atual = self.app_state.get("theme", "tech_dark")
+        self.tema_atual = self.app_state.get("theme", "dark_green") # ATUALIZADO
         if self.tema_atual not in THEMES:
-            self.tema_atual = "tech_dark"
+            self.tema_atual = "dark_green" # ATUALIZADO
         self.visible_columns = self.app_state.get("visible_columns", COLUNAS[:])
         self.controller = DataController(COLUNAS, ITENS_POR_PAGINA)
         self.exportar = Exportar(self, self.controller)
@@ -748,6 +604,7 @@ class AppGUI(QMainWindow):
         exit_action = QAction("Sair", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+        
         view_menu = menu_bar.addMenu("Ver")
         self.consultas_action = QAction("Consultas", self, checkable=True)
         self.consultas_action.setChecked(True)
@@ -756,15 +613,23 @@ class AppGUI(QMainWindow):
         self.controle_action.triggered.connect(lambda: self.show_frame("Controle"))
         view_menu.addAction(self.consultas_action)
         view_menu.addAction(self.controle_action)
+        view_menu.addSeparator()
+        self.fullscreen_action = QAction("Tela Cheia (F11)", self, checkable=True)
+        self.fullscreen_action.triggered.connect(self.toggle_fullscreen)
+        view_menu.addAction(self.fullscreen_action)
+        
         prefs_menu = menu_bar.addMenu("Preferências")
         theme_menu = QMenu("Tema", self)
         prefs_menu.addMenu(theme_menu)
-        self.dark_action = QAction("Tech Dark", self, checkable=True)
-        self.dark_action.triggered.connect(lambda: self.set_theme("tech_dark"))
-        self.light_action = QAction("Tech Light", self, checkable=True)
-        self.light_action.triggered.connect(lambda: self.set_theme("tech_light"))
+        
+        # --- ATUALIZADO para os novos temas ---
+        self.dark_action = QAction("Dark Green", self, checkable=True)
+        self.dark_action.triggered.connect(lambda: self.set_theme("dark_green"))
+        self.light_action = QAction("Light Green", self, checkable=True)
+        self.light_action.triggered.connect(lambda: self.set_theme("light_green"))
         theme_menu.addAction(self.dark_action)
         theme_menu.addAction(self.light_action)
+        # --- FIM DA ATUALIZAÇÃO ---
 
     def closeEvent(self, event):
         header = self.frames["Consultas"].tabela.horizontalHeader()
@@ -781,6 +646,23 @@ class AppGUI(QMainWindow):
         shortcut_refresh.activated.connect(self.refresh_data_async)
         shortcut_filter = QShortcut(QKeySequence("Ctrl+F"), self)
         shortcut_filter.activated.connect(lambda: self.frames["Consultas"].entry_filtro.setFocus())
+        shortcut_fullscreen_f11 = QShortcut(QKeySequence(Qt.Key.Key_F11), self)
+        shortcut_fullscreen_f11.activated.connect(self.toggle_fullscreen)
+        shortcut_exit_fullscreen_esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
+        shortcut_exit_fullscreen_esc.activated.connect(self.exit_fullscreen)
+
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+            self.fullscreen_action.setChecked(False)
+        else:
+            self.showFullScreen()
+            self.fullscreen_action.setChecked(True)
+
+    def exit_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+            self.fullscreen_action.setChecked(False)
 
     def set_theme(self, theme_name):
         self.tema_atual = theme_name
@@ -788,8 +670,10 @@ class AppGUI(QMainWindow):
 
     def aplicar_tema_completo(self):
         self.setStyleSheet(THEMES[self.tema_atual])
-        self.dark_action.setChecked(self.tema_atual == "tech_dark")
-        self.light_action.setChecked(self.tema_atual == "tech_light")
+        # --- ATUALIZADO para os novos temas ---
+        self.dark_action.setChecked(self.tema_atual == "dark_green")
+        self.light_action.setChecked(self.tema_atual == "light_green")
+        # --- FIM DA ATUALIZAÇÃO ---
         for dialog in self.findChildren(QDialog):
             dialog.setStyleSheet(THEMES[self.tema_atual])
         self.frames["Controle"].update_display()
