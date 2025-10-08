@@ -31,113 +31,281 @@ from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_dat
 THEMES = {
     "tech_dark": """
         QWidget {
-            background-color: #1A1A1A; color: #BDBDBD; font-size: 15px; border: none;
+            background-color: #121212;
+            color: #E0E0E0;
+            font-size: 15px;
+            border: none;
         }
-        QMainWindow, QDialog { background-color: #1A1A1A; }
-        QGroupBox { 
-            background-color: #2C2C2C; 
-            border-radius: 8px; 
+
+        QMainWindow, QDialog {
+            background-color: #121212;
+        }
+
+        QGroupBox {
+            background-color: #1E1E1E;
+            border-radius: 8px;
             margin-top: 10px;
             padding: 10px;
         }
-        QGroupBox::title { 
-            subcontrol-origin: margin; subcontrol-position: top left; 
+
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
             padding: 0 10px;
             font-weight: bold;
-            color: #00C853;
+            color: #00E676;
         }
-        
+
         QTableWidget {
-            background-color: #2C2C2C; alternate-background-color: #333333;
-            gridline-color: #444444; color: #BDBDBD;
+            background-color: #1E1E1E;
+            alternate-background-color: #2A2A2A;
+            gridline-color: #333;
+            color: #E0E0E0;
         }
-        QTableWidget::item { border-bottom: 1px solid #444444; padding: 5px; }
-        QTableWidget::item:selected { background-color: #3498db; color: #FFFFFF; }
+
+        QTableWidget::item {
+            border-bottom: 1px solid #333;
+            padding: 5px;
+        }
+
+        QTableWidget::item:selected {
+            background-color: #00C853;
+            color: #000000;
+        }
 
         QHeaderView::section {
-            background-color: #00C853; color: #000000; padding: 5px; 
-            border: none; font-weight: bold;
+            background-color: #00E676;
+            color: #000000;
+            padding: 5px;
+            border: none;
+            font-weight: bold;
         }
+
         QPushButton {
-            background-color: #444444; color: #FFFFFF; padding: 8px 16px; 
-            border-radius: 4px; font-weight: bold;
+            background-color: #2C2C2C;
+            color: #FFFFFF;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3A;
+            font-weight: bold;
         }
-        QPushButton:hover { background-color: #555555; }
-        QPushButton:pressed { background-color: #333333; }
-        
+
+        QPushButton:hover {
+            background-color: #3A3A3A;
+        }
+
+        QPushButton:pressed {
+            background-color: #1A1A1A;
+        }
+
+        /* Botões principais — como 'Ver na Tabela' */
         QPushButton#PrimaryAction {
-             background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #00E676, stop:1 #00C853);
-             color: #000000; border-bottom: 2px solid #00B04A;
+            background-color: #00E676;
+            color: #0B0B0B;
+            border-radius: 6px;
+            border: 2px solid #00C853;
+            font-weight: bold;
+            padding: 8px 14px;
         }
-        QPushButton#PrimaryAction:hover { background-color: #00FF84; }
-        QPushButton#PrimaryAction:pressed { background-color: #00C853; border-bottom: none; }
+
+        QPushButton#PrimaryAction:hover {
+            background-color: #00FF88;
+            border-color: #00E676;
+        }
+
+        QPushButton#PrimaryAction:pressed {
+            background-color: #00C853;
+            border-color: #009E47;
+        }
 
         QLineEdit, QComboBox, QDateEdit {
-            background-color: #1A1A1A; border: 1px solid #444;
-            padding: 6px; border-radius: 4px;
+            background-color: #1A1A1A;
+            border: 1px solid #444;
+            padding: 6px;
+            border-radius: 4px;
+            color: #FFFFFF;
         }
+
         QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
-            border: 1px solid #00C853;
+            border: 1px solid #00E676;
         }
-        
-        QMenuBar { background-color: #2C2C2C; }
-        QMenuBar::item:selected { background: #00C853; color: #000000; }
-        QMenu { background-color: #2C2C2C; border: 1px solid #444; }
-        QMenu::item:selected { background-color: #00C853; color: #000000; }
+
+        QMenuBar {
+            background-color: #1E1E1E;
+            color: #E0E0E0;
+        }
+
+        QMenuBar::item:selected {
+            background: #00E676;
+            color: #000000;
+        }
+
+        QMenu {
+            background-color: #1E1E1E;
+            border: 1px solid #333;
+        }
+
+        QMenu::item:selected {
+            background-color: #00E676;
+            color: #000000;
+        }
+
+        QScrollBar:vertical {
+            background: #1A1A1A;
+            width: 12px;
+            margin: 0;
+        }
+
+        QScrollBar::handle:vertical {
+            background: #00E676;
+            border-radius: 6px;
+            min-height: 20px;
+        }
+
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            background: none;
+        }
     """,
+
     "tech_light": """
         QWidget {
-            background-color: #F3F4F6; color: #1A1A1A; font-size: 15px; border: none;
+            background-color: #ECEFF1;
+            color: #1C1C1C;
+            font-size: 15px;
+            border: none;
         }
-        QMainWindow, QDialog { background-color: #F3F4F6; }
-        QGroupBox { 
-            background-color: #FFFFFF;
-            border-radius: 8px; margin-top: 10px; padding: 10px;
+
+        QMainWindow, QDialog {
+            background-color: #ECEFF1;
         }
-        QGroupBox::title { 
-            subcontrol-origin: margin; subcontrol-position: top left; 
-            padding: 0 10px; font-weight: bold; color: #43A047;
+
+        QGroupBox {
+            background-color: #F7F9FA;
+            border-radius: 8px;
+            margin-top: 10px;
+            padding: 10px;
         }
-        
+
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 10px;
+            font-weight: bold;
+            color: #43A047;
+        }
+
         QTableWidget {
-            background-color: #FFFFFF; alternate-background-color: #F8F9F9;
-            gridline-color: #EAEAEA; color: #1A1A1A;
+            background-color: #F7F9FA;
+            alternate-background-color: #E0E4E7;
+            gridline-color: #B0BEC5;
+            color: #1A1A1A;
         }
-        QTableWidget::item { border-bottom: 1px solid #EAEAEA; padding: 5px; }
-        QTableWidget::item:selected { background-color: #3498db; color: #FFFFFF; }
+
+        QTableWidget::item {
+            border-bottom: 1px solid #C0C9CC;
+            padding: 5px;
+        }
+
+        QTableWidget::item:selected {
+            background-color: #43A047;
+            color: #FFFFFF;
+        }
 
         QHeaderView::section {
-            background-color: #4CAF50; color: #FFFFFF; padding: 5px; 
-            border: none; font-weight: bold;
+            background-color: #4CAF50;
+            color: #FFFFFF;
+            padding: 5px;
+            border: none;
+            font-weight: bold;
         }
+
         QPushButton {
-            background-color: #E0E0E0; color: #1A1A1A; padding: 8px 16px; 
-            border-radius: 4px; font-weight: bold;
+            background-color: #CFD8DC;
+            color: #1A1A1A;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #B0BEC5;
+            font-weight: bold;
         }
-        QPushButton:hover { background-color: #E5E5E5; }
-        QPushButton:pressed { background-color: #D0D0D0; }
-        
+
+        QPushButton:hover {
+            background-color: #BFC9CA;
+        }
+
+        QPushButton:pressed {
+            background-color: #AEB6BF;
+        }
+
+        /* Botões principais — como 'Ver na Tabela' */
         QPushButton#PrimaryAction {
-             background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4CAF50, stop:1 #43A047);
-             color: #FFFFFF; border-bottom: 2px solid #3B8E3F;
+            background-color: #43A047;
+            color: #FFFFFF;
+            border-radius: 6px;
+            border: 2px solid #388E3C;
+            font-weight: bold;
+            padding: 8px 14px;
         }
-        QPushButton#PrimaryAction:hover { background-color: #5CDA61; }
-        QPushButton#PrimaryAction:pressed { background-color: #43A047; border-bottom: none; }
-        
+
+        QPushButton#PrimaryAction:hover {
+            background-color: #4CAF50;
+            border-color: #43A047;
+        }
+
+        QPushButton#PrimaryAction:pressed {
+            background-color: #388E3C;
+            border-color: #2E7D32;
+        }
+
         QLineEdit, QComboBox, QDateEdit {
-            background-color: #FFFFFF; border: 1px solid #D0D0D0;
-            padding: 6px; border-radius: 4px;
+            background-color: #FFFFFF;
+            border: 1px solid #B0BEC5;
+            padding: 6px;
+            border-radius: 4px;
         }
+
         QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
-            border: 1px solid #4CAF50;
+            border: 1px solid #43A047;
         }
-        
-        QMenuBar { background-color: #FFFFFF; }
-        QMenuBar::item:selected { background: #4CAF50; color: #FFFFFF; }
-        QMenu { background-color: #FFFFFF; border: 1px solid #D0D0D0; }
-        QMenu::item:selected { background: #4CAF50; color: #FFFFFF; }
+
+        QMenuBar {
+            background-color: #F7F9FA;
+            color: #1A1A1A;
+        }
+
+        QMenuBar::item:selected {
+            background: #43A047;
+            color: #FFFFFF;
+        }
+
+        QMenu {
+            background-color: #F7F9FA;
+            border: 1px solid #B0BEC5;
+        }
+
+        QMenu::item:selected {
+            background-color: #43A047;
+            color: #FFFFFF;
+        }
+
+        QScrollBar:vertical {
+            background: #E0E4E7;
+            width: 12px;
+            margin: 0;
+        }
+
+        QScrollBar::handle:vertical {
+            background: #43A047;
+            border-radius: 6px;
+            min-height: 20px;
+        }
+
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            background: none;
+        }
     """
 }
+
+
 
 
 # --- NOVOS WIDGETS E DIÁLOGOS ---
@@ -333,13 +501,11 @@ class ConsultaScreen(QWidget):
                     item_text = str(row_data.get(col_name, ""))
                     self.tabela.setItem(row_idx, col_idx, QTableWidgetItem(item_text))
     
-    # --- INÍCIO DA CORREÇÃO ---
     def atualizar_label_pagina(self):
         total_registos = self.controller.total_registos
         total_paginas = self.controller.total_paginas if self.controller.total_registos > 0 else 1
         self.main_app.pagina_atual = max(1, min(self.main_app.pagina_atual, total_paginas))
         self.label_pagina.setText(f"Página {self.main_app.pagina_atual}/{total_paginas} ({total_registos})")
-    # --- FIM DA CORREÇÃO ---
 
 class ControleScreen(QWidget):
     def __init__(self, main_app):
@@ -347,36 +513,60 @@ class ControleScreen(QWidget):
         self.main_app = main_app
         self.status_widgets = {}
         self.current_ids = set()
+
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(20)
+
+        # --- Painel do gráfico ---
         chart_group = QGroupBox("Visão Geral do Status")
+        chart_group.setMinimumWidth(420)
         chart_layout = QVBoxLayout(chart_group)
+        chart_layout.setContentsMargins(10, 10, 10, 10)
+
         self.chart_canvas = MplCanvas(self, width=5, height=4, dpi=100)
-        chart_layout.addWidget(self.chart_canvas)
+        self.chart_canvas.setFixedHeight(300)
+        chart_layout.addWidget(self.chart_canvas, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.status_summary_label = QLabel("Monitorando 0 clientes | Última atualização: N/A")
+        self.status_summary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_summary_label.setStyleSheet("font-weight: bold; font-size: 16px; margin-top: 10px;")
+        chart_layout.addWidget(self.status_summary_label)
+
         main_layout.addWidget(chart_group, 1)
+
+        # --- Painel da lista de clientes ---
         list_group = QGroupBox("Status por Cliente")
         list_layout = QVBoxLayout(list_group)
-        self.status_summary_label = QLabel("Monitorando 0 clientes | Última atualização: N/A")
+        list_layout.setContentsMargins(10, 10, 10, 10)
+        list_layout.setSpacing(10)
+
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_content = QWidget()
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll_area.setWidget(self.scroll_content)
-        list_layout.addWidget(self.status_summary_label)
-        list_layout.addWidget(self.scroll_area, 1)
+        list_layout.addWidget(self.scroll_area)
+
         main_layout.addWidget(list_group, 2)
+
+        # --- Timer de atualização ---
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_display)
+
     def start_periodic_update(self):
         if not self.update_timer.isActive():
             self.update_display()
             self.update_timer.start(5000)
+
     def stop_periodic_update(self):
         self.update_timer.stop()
+
     def update_display(self):
         client_status_ref = self.main_app.client_status
         new_ids = set(client_status_ref.keys())
+
         if new_ids != self.current_ids:
             while self.scroll_layout.count():
                 child = self.scroll_layout.takeAt(0)
@@ -384,78 +574,124 @@ class ControleScreen(QWidget):
                     child.widget().deleteLater()
             self.status_widgets.clear()
             self.current_ids = new_ids
+
             for track_id in sorted(list(self.current_ids)):
-                card = QGroupBox(f"TrackID: {track_id}")
-                card_layout = QGridLayout(card)
-                status_icon = QLabel("●")
-                status_label = QLabel("Aguardando...")
-                btn_ver_tabela = QPushButton("Ver na Tabela")
-                btn_ver_tabela.clicked.connect(lambda _, tid=track_id: self.main_app.show_in_table(tid))
-                card_layout.addWidget(status_icon, 0, 0)
-                card_layout.addWidget(status_label, 0, 1)
-                card_layout.addWidget(btn_ver_tabela, 1, 0, 1, 2)
-                card_layout.setColumnStretch(1, 1)
+                card = QFrame()
+                card_layout = QHBoxLayout(card)
+                card_layout.setContentsMargins(12, 8, 12, 8)
+                card_layout.setSpacing(14)
+
+                icon = QLabel("●")
+                icon.setFixedWidth(25)
+                icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+                label = QLabel(f"<b>TrackID:</b> {track_id}<br><i>Aguardando...</i>")
+                label.setWordWrap(True)
+
+                btn = QPushButton("Ver na Tabela")
+                btn.setObjectName("PrimaryAction")
+                btn.setFixedWidth(140)
+                btn.clicked.connect(lambda _, tid=track_id: self.main_app.show_in_table(tid))
+
+                card_layout.addWidget(icon)
+                card_layout.addWidget(label, 1)
+                card_layout.addWidget(btn)
+
+                card.setFrameShape(QFrame.Shape.StyledPanel)
+                card.setStyleSheet("border-radius: 10px; padding: 8px;")
                 self.scroll_layout.addWidget(card)
-                self.status_widgets[track_id] = {"icon": status_icon, "label": status_label}
+                self.status_widgets[track_id] = {"card": card, "icon": icon, "label": label}
+
+        # --- Atualização de status ---
         ok_count, error_count, no_signal_count = 0, 0, 0
+        is_dark = self.main_app.tema_atual == "tech_dark"
+
+        # Paleta por tema
+        palette_dark = {
+            "ok": "#00FF88",
+            "error": "#FF5252",
+            "no_signal": "#8E9BAA",
+            "pending": "#FFC107",
+            "card_bg": "#1E2226",
+            "border": "#2D3338",
+            "text": "#FFFFFF",
+        }
+        palette_light = {
+            "ok": "#43A047",
+            "error": "#E53935",
+            "no_signal": "#90A4AE",
+            "pending": "#FFB300",
+            "card_bg": "#FFFFFF",
+            "border": "#D9DEE2",
+            "text": "#1A1A1A",
+        }
+        colors = palette_dark if is_dark else palette_light
+
         for track_id, status_info in client_status_ref.items():
             if track_id in self.status_widgets:
-                widgets = self.status_widgets[track_id]
+                w = self.status_widgets[track_id]
                 status = status_info.get("status", "N/A")
                 message = status_info.get("message", "")
+                card_style = f"background-color: {colors['card_bg']}; border: 1px solid {colors['border']}; border-radius: 10px;"
+
                 if status == "OK":
-                    lat = status_info.get('latitude', 'N/A')
-                    lon = status_info.get('longitude', 'N/A')
-                    dt = status_info.get('datahora', 'N/A')
-                    message = f"<b>Lat:</b> {lat}, <b>Lon:</b> {lon} <br><b>Data/Hora:</b> {dt}"
-                    color = "#00C853"
+                    color = colors["ok"]
+                    msg = f"<b>Latitude:</b> {status_info.get('latitude', 'N/A')}<br>" \
+                          f"<b>Longitude:</b> {status_info.get('longitude', 'N/A')}<br>" \
+                          f"<b>Data/Hora:</b> {status_info.get('datahora', 'N/A')}"
                     ok_count += 1
                 elif status == "ERRO":
-                    color = "#e74c3c"
-                    message = f"<b>ERRO:</b> {message}"
+                    color = colors["error"]
+                    msg = f"<b>ERRO:</b> {message}"
                     error_count += 1
                 elif status == "SEM REGISTRO RECENTE":
-                    color = "#95a5a6"
-                    message = f"<i>{message}</i>"
+                    color = colors["no_signal"]
+                    msg = f"<i>{message}</i>"
                     no_signal_count += 1
-                else: 
-                    color = "#f39c12"
+                else:
+                    color = colors["pending"]
+                    msg = "<i>Aguardando atualização...</i>"
                     no_signal_count += 1
 
-                widgets["icon"].setStyleSheet(f"color: {color}; font-weight: bold; font-size: 18px;")
-                widgets["label"].setText(message)
+                w["icon"].setStyleSheet(f"color: {color}; font-size: 20px; font-weight: bold;")
+                w["label"].setText(f"<b>TrackID:</b> {track_id}<br>{msg}")
+                w["card"].setStyleSheet(card_style)
+
         now = datetime.now().strftime("%H:%M:%S")
-        self.status_summary_label.setText(f"<b>Total: {len(self.current_ids)}</b> | Última atualização: {now}")
+        self.status_summary_label.setText(
+            f"<b>Total: {len(self.current_ids)}</b> | Última atualização: {now}"
+        )
         self.update_chart(ok_count, error_count, no_signal_count)
+
     def update_chart(self, ok, error, no_signal):
         self.chart_canvas.axes.clear()
-        labels = []
-        sizes = []
-        colors = []
-        if ok > 0:
-            labels.append(f'OK ({ok})')
-            sizes.append(ok)
-            colors.append('#00C853')
-        if error > 0:
-            labels.append(f'Erro ({error})')
-            sizes.append(error)
-            colors.append('#e74c3c')
-        if no_signal > 0:
-            labels.append(f'Sem Registro Recente ({no_signal})')
-            sizes.append(no_signal)
-            colors.append('#95a5a6')
-        if not sizes:
-            sizes = [1]
-            labels = ['Nenhum cliente']
-            colors = ['#444444']
         is_dark = self.main_app.tema_atual == "tech_dark"
-        text_color = '#FFFFFF' if is_dark else '#1A1A1A'
+        theme_colors = {
+            "ok": "#00FF88" if is_dark else "#43A047",
+            "error": "#FF5252" if is_dark else "#E53935",
+            "no_signal": "#8E9BAA" if is_dark else "#90A4AE",
+        }
+        labels, sizes, colors = [], [], []
+        if ok > 0:
+            labels.append(f"OK ({ok})"); sizes.append(ok); colors.append(theme_colors["ok"])
+        if error > 0:
+            labels.append(f"Erro ({error})"); sizes.append(error); colors.append(theme_colors["error"])
+        if no_signal > 0:
+            labels.append(f"Sem Sinal ({no_signal})"); sizes.append(no_signal); colors.append(theme_colors["no_signal"])
+        if not sizes:
+            sizes, labels, colors = [1], ["Nenhum cliente"], ["#444444" if is_dark else "#CCCCCC"]
+
+        text_color = "#FFFFFF" if is_dark else "#1A1A1A"
         self.chart_canvas.axes.pie(
-            sizes, labels=labels, autopct='%1.1f%%', startangle=90,
-            colors=colors, textprops={'color': text_color, 'weight': 'bold'}
+            sizes,
+            labels=labels,
+            autopct="%1.1f%%",
+            startangle=90,
+            colors=colors,
+            textprops={"color": text_color, "weight": "bold"},
         )
-        self.chart_canvas.axes.axis('equal')
-        self.chart_canvas.figure.set_facecolor('none')
+        self.chart_canvas.axes.axis("equal")
+        self.chart_canvas.figure.set_facecolor("none")
         self.chart_canvas.draw()
 
 
