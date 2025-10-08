@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QDate
 from PyQt6.QtGui import QPalette, QColor, QFont, QKeySequence, QShortcut, QCursor, QAction
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Imports para o gráfico
 import matplotlib
@@ -25,7 +25,7 @@ from src.utils.exportar import Exportar
 from src.utils.config import COLUNAS
 from src.utils.settings_manager import ITENS_POR_PAGINA
 from src.utils.state_manager import load_state, save_state
-from src.utils.datetime_utils import is_valid_ui_date
+from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_date
 
 # --- NOVOS TEMAS "TECH DARK / LIGHT" ---
 THEMES = {
@@ -179,7 +179,7 @@ class ExportOptionsDialog(QDialog):
         self.accept()
 
 
-# --- WORKER THREAD, COLUMN SETTINGS, CONSULTA SCREEN, DASHBOARD SCREEN ---
+# --- WORKER THREAD, COLUMN SETTINGS, CONSULTA SCREEN, CONTROLE SCREEN ---
 class Worker(QThread):
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
@@ -223,7 +223,7 @@ class ConsultaScreen(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
-        controls_group = QGroupBox("Painel de Controle")
+        controls_group = QGroupBox()
         self.set_shadow(controls_group)
         controls_layout = QGridLayout(controls_group)
         self.entry_id = QLineEdit()
@@ -271,7 +271,7 @@ class ConsultaScreen(QWidget):
         self.tabela.itemDoubleClicked.connect(self.main_app.show_record_details)
         self.tabela.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         bottom_layout = QHBoxLayout()
-        paginacao_group = QGroupBox("Paginação")
+        paginacao_group = QGroupBox()
         self.set_shadow(paginacao_group)
         paginacao_layout = QHBoxLayout(paginacao_group)
         self.btn_primeira = QPushButton("<<")
@@ -326,19 +326,22 @@ class ConsultaScreen(QWidget):
         self.tabela.setRowCount(0)
         if not dados: return
         self.tabela.setRowCount(len(dados))
-        header_labels = [self.tabela.horizontalHeaderItem(i).text() for i in range(self.tabela.columnCount())]
+        header_labels = [self.tabela.horizontalHeaderItem(i).text().replace(" ↓", "").replace(" ↑", "") for i in range(self.tabela.columnCount())]
         for row_idx, row_data in enumerate(dados):
-            for col_name in header_labels:
-                col_idx = header_labels.index(col_name)
-                item_text = str(row_data.get(col_name, ""))
-                self.tabela.setItem(row_idx, col_idx, QTableWidgetItem(item_text))
+            for col_idx, col_name in enumerate(header_labels):
+                if not self.tabela.isColumnHidden(col_idx):
+                    item_text = str(row_data.get(col_name, ""))
+                    self.tabela.setItem(row_idx, col_idx, QTableWidgetItem(item_text))
+    
+    # --- INÍCIO DA CORREÇÃO ---
     def atualizar_label_pagina(self):
         total_registos = self.controller.total_registos
-        total_paginas = self.controller.total_paginas if total_registos > 0 else 1
+        total_paginas = self.controller.total_paginas if self.controller.total_registos > 0 else 1
         self.main_app.pagina_atual = max(1, min(self.main_app.pagina_atual, total_paginas))
         self.label_pagina.setText(f"Página {self.main_app.pagina_atual}/{total_paginas} ({total_registos})")
+    # --- FIM DA CORREÇÃO ---
 
-class DashboardScreen(QWidget):
+class ControleScreen(QWidget):
     def __init__(self, main_app):
         super().__init__()
         self.main_app = main_app
@@ -411,10 +414,14 @@ class DashboardScreen(QWidget):
                     color = "#e74c3c"
                     message = f"<b>ERRO:</b> {message}"
                     error_count += 1
-                else:
+                elif status == "SEM REGISTRO RECENTE":
                     color = "#95a5a6"
                     message = f"<i>{message}</i>"
                     no_signal_count += 1
+                else: 
+                    color = "#f39c12"
+                    no_signal_count += 1
+
                 widgets["icon"].setStyleSheet(f"color: {color}; font-weight: bold; font-size: 18px;")
                 widgets["label"].setText(message)
         now = datetime.now().strftime("%H:%M:%S")
@@ -434,7 +441,7 @@ class DashboardScreen(QWidget):
             sizes.append(error)
             colors.append('#e74c3c')
         if no_signal > 0:
-            labels.append(f'Sem Sinal ({no_signal})')
+            labels.append(f'Sem Registro Recente ({no_signal})')
             sizes.append(no_signal)
             colors.append('#95a5a6')
         if not sizes:
@@ -481,10 +488,10 @@ class AppGUI(QMainWindow):
         self.container = QStackedWidget()
         self.frames = {
             "Consultas": ConsultaScreen(self.controller, self.api, self),
-            "Dashboard": DashboardScreen(self)
+            "Controle": ControleScreen(self)
         }
         self.container.addWidget(self.frames["Consultas"])
-        self.container.addWidget(self.frames["Dashboard"])
+        self.container.addWidget(self.frames["Controle"])
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Bem-vindo!")
         self.progress_bar = QProgressBar()
@@ -509,10 +516,10 @@ class AppGUI(QMainWindow):
         self.consultas_action = QAction("Consultas", self, checkable=True)
         self.consultas_action.setChecked(True)
         self.consultas_action.triggered.connect(lambda: self.show_frame("Consultas"))
-        self.dashboard_action = QAction("Dashboard", self, checkable=True)
-        self.dashboard_action.triggered.connect(lambda: self.show_frame("Dashboard"))
+        self.controle_action = QAction("Controle", self, checkable=True)
+        self.controle_action.triggered.connect(lambda: self.show_frame("Controle"))
         view_menu.addAction(self.consultas_action)
-        view_menu.addAction(self.dashboard_action)
+        view_menu.addAction(self.controle_action)
         prefs_menu = menu_bar.addMenu("Preferências")
         theme_menu = QMenu("Tema", self)
         prefs_menu.addMenu(theme_menu)
@@ -549,7 +556,7 @@ class AppGUI(QMainWindow):
         self.light_action.setChecked(self.tema_atual == "tech_light")
         for dialog in self.findChildren(QDialog):
             dialog.setStyleSheet(THEMES[self.tema_atual])
-        self.frames["Dashboard"].update_display()
+        self.frames["Controle"].update_display()
 
     def open_column_settings(self):
         dialog = ColumnSettingsDialog(COLUNAS, self.visible_columns, self)
@@ -564,13 +571,13 @@ class AppGUI(QMainWindow):
 
     def show_frame(self, frame_name):
         self.consultas_action.setChecked(frame_name == "Consultas")
-        self.dashboard_action.setChecked(frame_name == "Dashboard")
+        self.controle_action.setChecked(frame_name == "Controle")
         if frame_name == "Consultas":
             self.container.setCurrentWidget(self.frames["Consultas"])
-            self.frames["Dashboard"].stop_periodic_update()
-        elif frame_name == "Dashboard":
-            self.container.setCurrentWidget(self.frames["Dashboard"])
-            self.frames["Dashboard"].start_periodic_update()
+            self.frames["Controle"].stop_periodic_update()
+        elif frame_name == "Controle":
+            self.container.setCurrentWidget(self.frames["Controle"])
+            self.frames["Controle"].start_periodic_update()
 
     def show_in_table(self, track_id):
         self.show_frame("Consultas")
@@ -581,6 +588,10 @@ class AppGUI(QMainWindow):
     
     def monitor_all_clients(self):
         if not self.controller.dados_completos: return
+        
+        limite_tempo = timedelta(hours=24)
+        agora = datetime.now()
+
         all_data = self.controller.dados_completos
         records_by_trackid = {}
         for record in all_data:
@@ -589,16 +600,44 @@ class AppGUI(QMainWindow):
                 if track_id not in records_by_trackid:
                     records_by_trackid[track_id] = []
                 records_by_trackid[track_id].append(record)
+
         for track_id, records in records_by_trackid.items():
             latest_record = max(records, key=lambda r: r.get("DATAHORA", ""))
-            self.client_status[track_id] = {
-                'status': 'OK', 'latitude': latest_record.get('LATITUDE'),
-                'longitude': latest_record.get('LONGITUDE'), 'datahora': latest_record.get('DATAHORA'),
-            }
+            
+            data_ultimo_registo_str = latest_record.get("DATAHORA", "")
+            status_cliente = {}
+            try:
+                data_ultimo_registo_obj = parse_api_datetime_to_date(data_ultimo_registo_str)
+                if data_ultimo_registo_obj is None:
+                    raise ValueError("Data nula ou em formato inválido")
+
+                data_ultimo_registo_dt = datetime.combine(data_ultimo_registo_obj, datetime.min.time())
+                
+                if agora - data_ultimo_registo_dt > limite_tempo:
+                    status_cliente = {
+                        'status': 'SEM REGISTRO RECENTE', 
+                        'message': f"Último registro: {data_ultimo_registo_str}"
+                    }
+                else:
+                    status_cliente = {
+                        'status': 'OK', 
+                        'latitude': latest_record.get('LATITUDE'),
+                        'longitude': latest_record.get('LONGITUDE'), 
+                        'datahora': data_ultimo_registo_str
+                    }
+            except (ValueError, TypeError):
+                 status_cliente = {
+                    'status': 'ERRO', 
+                    'message': 'Formato de data inválido no último registo.'
+                }
+
+            self.client_status[track_id] = status_cliente
+
         current_ids = set(records_by_trackid.keys())
         for old_id in list(self.client_status.keys()):
             if old_id not in current_ids:
                 del self.client_status[old_id]
+
 
     def on_worker_finished(self, worker):
         if worker in self.workers:
@@ -721,11 +760,18 @@ class AppGUI(QMainWindow):
     
     def show_record_details(self, item):
         row_index = item.row()
-        record_id = self.frames["Consultas"].tabela.item(row_index, 0).text()
-        full_record = self.controller.get_record_by_id(record_id)
-        if full_record:
-            dialog = RecordDetailDialog(full_record, self)
-            dialog.exec()
+        id_col_index = -1
+        for i, col_name in enumerate(COLUNAS):
+            if col_name == "IDMENSAGEM":
+                id_col_index = i
+                break
+        
+        if id_col_index != -1:
+            record_id = self.frames["Consultas"].tabela.item(row_index, id_col_index).text()
+            full_record = self.controller.get_record_by_id(record_id)
+            if full_record:
+                dialog = RecordDetailDialog(full_record, self)
+                dialog.exec()
             
     def exportar_excel(self):
         self._show_export_options("excel")
