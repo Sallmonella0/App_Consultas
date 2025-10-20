@@ -1,0 +1,50 @@
+[
+  {
+    "nome": "Vip",
+    "url": "http://85.209.93.16/api/data",
+    "user": "vip",
+    "password": "83114d8fc3164de4e85b4e6ee8a04bbd"
+  },
+  {
+    "nome": "CKL",
+    "url": "http://85.209.93.16/api/data",
+    "user": "ckl",
+    "password": "d4f864e8421eb0bf07384a1ae831ab7b"
+  },
+    {
+    "nome": "Reverselog",
+    "url": "http://85.209.93.16/api/data",
+    "user": "reverselog",
+    "password": "dbbc6fa7bdaa7c9092a2b2560594ec55"
+  },
+  {
+    "nome": "Rodoleve",
+    "url": "http://85.209.93.16/api/data",
+    "user": "rodoleve",
+    "password": "d3a0b71c95972adf17822e30362680f8"
+  },
+    {
+    "nome": "servidorGxBeloog",
+    "url": "http://85.209.93.16/api/data",
+    "user": "servidorGxBeloog",
+    "password": "0330265cbb2bf452ae54226c43b3d081"
+  },
+    {
+    "nome": "Gallotti",
+    "url": "http://85.209.93.16/api/data",
+    "user": "gallotti",
+    "password": "0cb9bcfb3bd24a8ad373bb1c005e25c0"
+  },
+    {
+    "nome": "Transgires",
+    "url": "http://85.209.93.16/api/data",
+    "user": "transgires",
+    "password": "18833edf8866b7f280266ecee733a43d"
+  },
+    {
+    "nome": "Agregamais",
+    "url": "http://85.209.93.16/api/data",
+    "user": "agregamais",
+    "password": "eabfe1ffdb963ed3656da4ed91f7b37a"
+  }
+]

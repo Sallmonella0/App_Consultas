@@ -1,12 +1,14 @@
 # src/gui/app_gui_pyqt.py
 
 import sys
+import logging
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLineEdit, QLabel, QComboBox, QTableWidget,
     QTableWidgetItem, QHeaderView, QFrame, QStackedWidget, QMessageBox,
     QScrollArea, QDialog, QCheckBox, QDialogButtonBox, QGridLayout, QGroupBox,
-    QProgressBar, QMenu, QCalendarWidget, QDateEdit, QGraphicsDropShadowEffect
+    QProgressBar, QMenu, QCalendarWidget, QDateEdit, QGraphicsDropShadowEffect,
+    QTabWidget # Adicionado QTabWidget
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QDate
 from PyQt6.QtGui import QPalette, QColor, QFont, QKeySequence, QShortcut, QCursor, QAction
@@ -19,6 +21,7 @@ matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from src.core.api import ConsultaAPI
 from src.core.data_controller import DataController
 from src.core.exceptions import ConsultaAPIException
 from src.utils.exportar import Exportar
@@ -27,7 +30,7 @@ from src.utils.settings_manager import ITENS_POR_PAGINA
 from src.utils.state_manager import load_state, save_state
 from src.utils.datetime_utils import is_valid_ui_date, parse_api_datetime_to_date
 
-# --- NOVAS PALETAS DE CORES ---
+# --- PALETAS DE CORES (sem alterações) ---
 PALETTES = {
     "dark_green": {
         "bg": "#111111",
@@ -61,7 +64,7 @@ PALETTES = {
     }
 }
 
-# --- FUNÇÃO GERADORA DE TEMAS ---
+# --- FUNÇÃO GERADORA DE TEMAS (sem alterações) ---
 def generate_theme_qss(p):
     """Gera uma string QSS a partir de uma paleta de cores."""
     return f"""
@@ -87,6 +90,29 @@ def generate_theme_qss(p):
             padding: 0 10px;
             font-weight: bold;
             color: {p["primary"]};
+        }}
+        QTabWidget::pane {{
+            border: 1px solid {p["border"]};
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }}
+        QTabBar::tab {{
+            background: {p["bg"]};
+            border: 1px solid {p["border"]};
+            border-bottom: none;
+            padding: 8px 16px;
+            font-weight: bold;
+            border-radius: 8px 8px 0 0;
+            margin-right: 2px;
+        }}
+        QTabBar::tab:selected {{
+            background: {p["alt_bg"]};
+            border: 1px solid {p["border"]};
+            border-bottom: 2px solid {p["alt_bg"]};
+            color: {p["primary"]};
+        }}
+        QTabBar::tab:!selected:hover {{
+            background: {p["border"]};
         }}
         QTableWidget {{
             background-color: {p["alt_bg"]};
@@ -184,7 +210,7 @@ THEMES = {
     "light_green": generate_theme_qss(PALETTES["light_green"]),
 }
 
-# --- NOVOS WIDGETS E DIÁLOGOS ---
+# --- WIDGETS E DIÁLOGOS (sem alterações) ---
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
@@ -223,10 +249,10 @@ class ExportOptionsDialog(QDialog):
         self.accept()
 
 
-# --- WORKER THREAD, COLUMN SETTINGS, CONSULTA SCREEN, CONTROLE SCREEN ---
+# --- WORKER E COLUMN SETTINGS (sem alterações) ---
 class Worker(QThread):
     finished = pyqtSignal(object)
-    error = pyqtSignal(str)
+    error = pyqtSignal(object) # Alterado para emitir um objeto (ex: (nome_cliente, erro_msg))
     def __init__(self, func, *args, **kwargs):
         super().__init__()
         self.func = func
@@ -237,7 +263,7 @@ class Worker(QThread):
             result = self.func(*self.args, **self.kwargs)
             self.finished.emit(result)
         except Exception as e:
-            self.error.emit(str(e))
+            self.error.emit(e) # Emitir a exceção
 
 class ColumnSettingsDialog(QDialog):
     def __init__(self, all_columns, visible_columns, parent=None):
@@ -258,11 +284,12 @@ class ColumnSettingsDialog(QDialog):
     def get_selected_columns(self):
         return [col for col, checkbox in self.checkboxes.items() if checkbox.isChecked()]
 
+# --- TELA DE CONSULTAS (sem alterações) ---
 class ConsultaScreen(QWidget):
     def __init__(self, controller, api, main_app):
         super().__init__()
         self.controller = controller
-        self.api = api
+        self.api = api # Esta referência será atualizada pela AppGUI
         self.main_app = main_app
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(10, 10, 10, 10)
@@ -281,11 +308,11 @@ class ConsultaScreen(QWidget):
         self.btn_config_colunas = QPushButton("Colunas")
         self.btn_config_colunas.clicked.connect(self.main_app.open_column_settings)
         self.entry_filtro = QLineEdit()
-        self.entry_filtro.setPlaceholderText("Filtrar por termo...")
+        self.entry_filtro.setPlaceholderText("")
         self.combo_coluna = QComboBox()
         self.combo_coluna.addItems(["TODAS"] + COLUNAS)
         self.combo_coluna.setCurrentText("PLACA")
-        self.btn_aplicar_filtros = QPushButton("Aplicar Filtros")
+        self.btn_aplicar_filtros = QPushButton("Aplicar")
         self.btn_aplicar_filtros.setObjectName("PrimaryAction")
         self.btn_aplicar_filtros.clicked.connect(self.main_app.aplicar_filtro)
         self.btn_limpar_filtros = QPushButton("Limpar Filtros")
@@ -295,7 +322,7 @@ class ConsultaScreen(QWidget):
         controls_layout.addWidget(self.btn_consultar, 0, 2)
         controls_layout.addWidget(self.btn_refresh, 0, 3)
         controls_layout.addWidget(self.btn_config_colunas, 0, 4)
-        controls_layout.addWidget(QLabel("Filtro Rápido:"), 1, 0)
+        controls_layout.addWidget(QLabel("Filtro:"), 1, 0)
         controls_layout.addWidget(self.entry_filtro, 1, 1)
         controls_layout.addWidget(self.combo_coluna, 1, 2)
         controls_layout.addWidget(self.btn_aplicar_filtros, 1, 3)
@@ -383,12 +410,18 @@ class ConsultaScreen(QWidget):
         self.main_app.pagina_atual = max(1, min(self.main_app.pagina_atual, total_paginas))
         self.label_pagina.setText(f"Página {self.main_app.pagina_atual}/{total_paginas} ({total_registos})")
 
-class ControleScreen(QWidget):
+# --- [NOVA CLASSE] PÁGINA DE STATUS INDIVIDUAL ---
+class ClientStatusPage(QWidget):
+    """
+    Este widget contém o dashboard de UM cliente (o gráfico e a lista de TrackIDs).
+    É o layout que pertencia à 'ControleScreen' antiga.
+    """
     def __init__(self, main_app):
         super().__init__()
         self.main_app = main_app
         self.status_widgets = {}
         self.current_ids = set()
+        self.tema_atual = self.main_app.tema_atual
 
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(15, 15, 15, 15)
@@ -408,11 +441,10 @@ class ControleScreen(QWidget):
         self.status_summary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_summary_label.setStyleSheet("font-weight: bold; font-size: 16px; margin-top: 10px;")
         chart_layout.addWidget(self.status_summary_label)
-
         main_layout.addWidget(chart_group, 1)
 
         # --- Painel da lista de clientes ---
-        list_group = QGroupBox("Status por Cliente")
+        list_group = QGroupBox("Status por TrackID")
         list_layout = QVBoxLayout(list_group)
         list_layout.setContentsMargins(10, 10, 10, 10)
         list_layout.setSpacing(10)
@@ -424,24 +456,18 @@ class ControleScreen(QWidget):
         self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll_area.setWidget(self.scroll_content)
         list_layout.addWidget(self.scroll_area)
-
         main_layout.addWidget(list_group, 2)
 
-        # --- Timer de atualização ---
-        self.update_timer = QTimer(self)
-        self.update_timer.timeout.connect(self.update_display)
-
-    def start_periodic_update(self):
-        if not self.update_timer.isActive():
-            self.update_display()
-            self.update_timer.start(5000)
-
-    def stop_periodic_update(self):
-        self.update_timer.stop()
-
-    def update_display(self):
-        client_status_ref = self.main_app.client_status
+    def update_display(self, client_status_ref):
+        """
+        Atualiza este dashboard específico com os dados de status fornecidos.
+        'client_status_ref' é o dicionário de status para este cliente.
+        """
+        if client_status_ref is None:
+            client_status_ref = {}
+            
         new_ids = set(client_status_ref.keys())
+        self.tema_atual = self.main_app.tema_atual # Garante que o tema está atualizado
 
         if new_ids != self.current_ids:
             while self.scroll_layout.count():
@@ -466,8 +492,12 @@ class ControleScreen(QWidget):
 
                 btn = QPushButton("Ver na Tabela")
                 btn.setObjectName("PrimaryAction")
+                # O botão deve funcionar apenas para o cliente ATUALMENTE selecionado na tela de Consultas
                 btn.clicked.connect(lambda _, tid=track_id: self.main_app.show_in_table(tid))
-
+                if self.main_app.cliente_atual['nome'] != self.parent().parent().tabText(self.parent().parent().currentIndex()):
+                     btn.setEnabled(False)
+                     btn.setToolTip("Mude para este cliente na tela de Consultas para ativar o botão")
+                
                 card_layout.addWidget(icon)
                 card_layout.addWidget(label, 1)
                 card_layout.addWidget(btn)
@@ -478,9 +508,7 @@ class ControleScreen(QWidget):
 
         # --- Atualização de status ---
         ok_count, error_count, no_signal_count = 0, 0, 0
-        is_dark = self.main_app.tema_atual == "dark_green"
-        
-        palette = PALETTES[self.main_app.tema_atual]
+        palette = PALETTES[self.tema_atual]
 
         for track_id, status_info in client_status_ref.items():
             if track_id in self.status_widgets:
@@ -496,15 +524,15 @@ class ControleScreen(QWidget):
                           f"<b>Data/Hora:</b> {status_info.get('datahora', 'N/A')}"
                     ok_count += 1
                 elif status == "ERRO":
-                    color = "#FF5252" # Cor de erro universal
+                    color = "#FF5252"
                     msg = f"<b>ERRO:</b> {message}"
                     error_count += 1
                 elif status == "SEM REGISTRO RECENTE":
-                    color = "#8E9BAA" # Cor de sem sinal universal
+                    color = "#8E9BAA"
                     msg = f"<i>{message}</i>"
                     no_signal_count += 1
                 else:
-                    color = "#FFC107" # Cor de pendente universal
+                    color = "#FFC107"
                     msg = "<i>Aguardando atualização...</i>"
                     no_signal_count += 1
 
@@ -514,13 +542,13 @@ class ControleScreen(QWidget):
 
         now = datetime.now().strftime("%H:%M:%S")
         self.status_summary_label.setText(
-            f"<b>Total: {len(self.current_ids)}</b> | Última atualização: {now}"
+            f"<b>Total: {len(self.current_ids)}</b> | Última atualização (dados): {now}"
         )
         self.update_chart(ok_count, error_count, no_signal_count)
 
     def update_chart(self, ok, error, no_signal):
         self.chart_canvas.axes.clear()
-        palette = PALETTES[self.main_app.tema_atual]
+        palette = PALETTES[self.tema_atual]
         
         theme_colors = {
             "ok": palette['primary'],
@@ -535,7 +563,7 @@ class ControleScreen(QWidget):
         if no_signal > 0:
             labels.append(f"Sem Sinal ({no_signal})"); sizes.append(no_signal); colors.append(theme_colors["no_signal"])
         if not sizes:
-            sizes, labels, colors = [1], ["Nenhum cliente"], [palette['border']]
+            sizes, labels, colors = [1], ["Nenhum dado"], [palette['border']]
 
         text_color = palette['text_main']
         self.chart_canvas.axes.pie(
@@ -551,54 +579,155 @@ class ControleScreen(QWidget):
         self.chart_canvas.draw()
 
 
+# --- [CLASSE MODIFICADA] TELA DE CONTROLE (AGORA UM CONTAINER DE ABAS) ---
+class ControleScreen(QWidget):
+    def __init__(self, main_app):
+        super().__init__()
+        self.main_app = main_app
+        self.client_pages = {} # Dicionário para guardar as páginas: {'NomeCliente': ClientStatusPage}
+
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        
+        self.tab_widget = QTabWidget()
+        main_layout.addWidget(self.tab_widget)
+        
+        # O timer de atualização foi movido para AppGUI
+
+    def update_dashboard(self, all_client_statuses):
+        """
+        Recebe o dicionário de status global e atualiza/cria as abas.
+        all_client_statuses = {'Cliente A': {status_dict}, 'Cliente B': {status_dict}}
+        """
+        self.tab_widget.clear() # Limpa e recria as abas
+        self.client_pages = {}
+
+        for client_name, status_dict in sorted(all_client_statuses.items()):
+            
+            page = ClientStatusPage(self.main_app)
+            self.client_pages[client_name] = page
+            self.tab_widget.addTab(page, client_name)
+            
+            # Atualiza a página com os dados
+            page.update_display(status_dict)
+
 # --- JANELA PRINCIPAL (APP GUI) ---
 class AppGUI(QMainWindow):
-    def __init__(self, api):
+    def __init__(self, clientes):
         super().__init__()
-        self.api = api
+        self.clientes = clientes
+        self.cliente_atual = self.clientes[0]
+        self.api = None # Será inicializado em 'inicializar_api_e_carregar_dados'
+        
         self.app_state = load_state()
-        self.tema_atual = self.app_state.get("theme", "dark_green") # ATUALIZADO
+        self.tema_atual = self.app_state.get("theme", "dark_green")
         if self.tema_atual not in THEMES:
-            self.tema_atual = "dark_green" # ATUALIZADO
+            self.tema_atual = "dark_green"
         self.visible_columns = self.app_state.get("visible_columns", COLUNAS[:])
         self.controller = DataController(COLUNAS, ITENS_POR_PAGINA)
         self.exportar = Exportar(self, self.controller)
         self.pagina_atual = 1
         self.workers = []
-        self.client_status = {}
+        
+        # --- [NOVO] ARMAZENAMENTO DE STATUS GLOBAL ---
+        self.global_client_data = {} # Armazena os dados brutos de todos os clientes
+        self.global_client_status = {} # Armazena os status processados de todos os clientes
+        
         self.is_first_load = True
-        self.setWindowTitle("App de Consulta Avançada")
+        self.setWindowTitle(f"App de Consulta - {self.cliente_atual['nome']}")
+        
         geometry = self.app_state.get("geometry")
         if geometry and isinstance(geometry, (list, tuple)) and len(geometry) == 4:
             self.setGeometry(*geometry)
         else:
             self.setGeometry(100, 100, 1300, 700)
-        self._create_menu()
+            
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
+        
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.addWidget(QLabel("<b>Cliente:</b>"))
+        self.combo_clientes = QComboBox()
+        for cliente in self.clientes:
+            self.combo_clientes.addItem(cliente['nome'])
+        self.combo_clientes.currentIndexChanged.connect(self.on_cliente_mudou)
+        top_bar_layout.addWidget(self.combo_clientes, 1)
+        top_bar_layout.addStretch()
+        main_layout.addLayout(top_bar_layout)
+        
+        self._create_menu()
+        
         self.container = QStackedWidget()
         self.frames = {
             "Consultas": ConsultaScreen(self.controller, self.api, self),
-            "Controle": ControleScreen(self)
+            "Controle": ControleScreen(self) # A tela de controle agora é o container de abas
         }
         self.container.addWidget(self.frames["Consultas"])
         self.container.addWidget(self.frames["Controle"])
+        main_layout.addWidget(self.container)
+        
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Bem-vindo!")
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         self.status_bar.addPermanentWidget(self.progress_bar)
-        main_layout.addWidget(self.container)
-        self.carregar_dados_iniciais()
-        self.monitor_timer = QTimer()
-        self.monitor_timer.timeout.connect(self.monitor_all_clients)
-        self.monitor_timer.start(15000)
+        
+        self.inicializar_api_e_carregar_dados()
+        
+        # --- [NOVO] MONITORAMENTO GLOBAL ---
+        self.global_monitor_timer = QTimer()
+        self.global_monitor_timer.timeout.connect(self.run_global_client_monitoring)
+        # 10 minutos = 10 * 60 * 1000 = 600000 ms
+        self.global_monitor_timer.start(600000)
+        self.run_global_client_monitoring() # Executa uma vez no início
+        # O timer antigo (monitor_timer) foi removido
+        
         self.update_visible_columns()
         self.aplicar_tema_completo()
         self.setup_shortcuts()
 
+    def on_cliente_mudou(self, index):
+        """Chamado quando o utilizador seleciona um novo cliente na ComboBox."""
+        self.cliente_atual = self.clientes[index]
+        self.setWindowTitle(f"App de Consulta - {self.cliente_atual['nome']}")
+        logging.info(f"Cliente (Consultas) alterado para: {self.cliente_atual['nome']}")
+        
+        self.controller.dados_completos = []
+        self.controller.aplicar_filtro()
+        self.renderizar_dados()
+        
+        # Carrega os dados do cliente selecionado para a tela de Consultas
+        self.inicializar_api_e_carregar_dados()
+        
+        # Atualiza o dashboard (para re-habilitar botões 'Ver na Tabela')
+        self.frames["Controle"].update_dashboard(self.global_client_status)
+
+
+    def inicializar_api_e_carregar_dados(self):
+        """Cria a instância da API para o cliente ATUAL e carrega os dados para a TELA DE CONSULTAS."""
+        creds = self.cliente_atual
+        try:
+            self.api = ConsultaAPI(creds['url'], creds['user'], creds['password'])
+        except Exception as e:
+            logging.error(f"Falha ao inicializar API para {creds['nome']}: {e}")
+            QMessageBox.critical(self, "Erro de Conexão", f"Não foi possível inicializar a API para o cliente {creds['nome']}.\nVerifique o 'clientes.json'.\nErro: {e}")
+            self.gerir_estado_widgets(False)
+            return
+
+        self.frames["Consultas"].api = self.api
+        
+        # Carrega os dados locais para o cliente selecionado
+        # Usamos os dados do cache global se já existirem, senão busca
+        if creds['nome'] in self.global_client_data:
+            logging.info(f"Carregando dados locais de {creds['nome']} a partir do cache global.")
+            self.on_dados_carregados(self.global_client_data[creds['nome']])
+        else:
+            logging.info(f"Buscando dados locais para {creds['nome']} pela primeira vez.")
+            self.carregar_dados_iniciais(force_refresh=True)
+
     def _create_menu(self):
+        # ... (sem alterações) ...
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("Ficheiro")
         exit_action = QAction("Sair", self)
@@ -622,16 +751,15 @@ class AppGUI(QMainWindow):
         theme_menu = QMenu("Tema", self)
         prefs_menu.addMenu(theme_menu)
         
-        # --- ATUALIZADO para os novos temas ---
         self.dark_action = QAction("Dark Green", self, checkable=True)
         self.dark_action.triggered.connect(lambda: self.set_theme("dark_green"))
         self.light_action = QAction("Light Green", self, checkable=True)
         self.light_action.triggered.connect(lambda: self.set_theme("light_green"))
         theme_menu.addAction(self.dark_action)
         theme_menu.addAction(self.light_action)
-        # --- FIM DA ATUALIZAÇÃO ---
 
     def closeEvent(self, event):
+        # ... (sem alterações) ...
         header = self.frames["Consultas"].tabela.horizontalHeader()
         widths = [header.sectionSize(i) for i in range(header.count())]
         self.app_state['theme'] = self.tema_atual
@@ -642,6 +770,7 @@ class AppGUI(QMainWindow):
         event.accept()
         
     def setup_shortcuts(self):
+        # ... (sem alterações) ...
         shortcut_refresh = QShortcut(QKeySequence("F5"), self)
         shortcut_refresh.activated.connect(self.refresh_data_async)
         shortcut_filter = QShortcut(QKeySequence("Ctrl+F"), self)
@@ -651,6 +780,7 @@ class AppGUI(QMainWindow):
         shortcut_exit_fullscreen_esc = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
         shortcut_exit_fullscreen_esc.activated.connect(self.exit_fullscreen)
 
+    # --- Funções de Fullscreen e Tema (sem alterações) ---
     def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
@@ -670,21 +800,22 @@ class AppGUI(QMainWindow):
 
     def aplicar_tema_completo(self):
         self.setStyleSheet(THEMES[self.tema_atual])
-        # --- ATUALIZADO para os novos temas ---
         self.dark_action.setChecked(self.tema_atual == "dark_green")
         self.light_action.setChecked(self.tema_atual == "light_green")
-        # --- FIM DA ATUALIZAÇÃO ---
         for dialog in self.findChildren(QDialog):
             dialog.setStyleSheet(THEMES[self.tema_atual])
-        self.frames["Controle"].update_display()
+        # Atualiza o dashboard (que agora tem abas)
+        self.frames["Controle"].update_dashboard(self.global_client_status)
 
     def open_column_settings(self):
+        # ... (sem alterações) ...
         dialog = ColumnSettingsDialog(COLUNAS, self.visible_columns, self)
         if dialog.exec():
             self.visible_columns = dialog.get_selected_columns()
             self.update_visible_columns()
 
     def update_visible_columns(self):
+        # ... (sem alterações) ...
         tabela = self.frames["Consultas"].tabela
         for i, col_name in enumerate(COLUNAS):
             tabela.setColumnHidden(i, col_name not in self.visible_columns)
@@ -692,29 +823,41 @@ class AppGUI(QMainWindow):
     def show_frame(self, frame_name):
         self.consultas_action.setChecked(frame_name == "Consultas")
         self.controle_action.setChecked(frame_name == "Controle")
+        
+        # A lógica de iniciar/parar o timer foi REMOVIDA
+        # O timer global agora corre independentemente
+        
         if frame_name == "Consultas":
             self.container.setCurrentWidget(self.frames["Consultas"])
-            self.frames["Controle"].stop_periodic_update()
         elif frame_name == "Controle":
             self.container.setCurrentWidget(self.frames["Controle"])
-            self.frames["Controle"].start_periodic_update()
+            # Atualiza os botões 'Ver na Tabela' no painel de controle
+            self.frames["Controle"].update_dashboard(self.global_client_status)
 
     def show_in_table(self, track_id):
+        # ... (sem alterações) ...
         self.show_frame("Consultas")
         screen = self.frames["Consultas"]
         screen.combo_coluna.setCurrentText("TrackID")
         screen.entry_filtro.setText(str(track_id))
         self.aplicar_filtro()
     
-    def monitor_all_clients(self):
-        if not self.controller.dados_completos: return
+    # --- [MÉTODO REFACTORADO] ---
+    def process_data_into_status(self, dados_completos):
+        """
+        Recebe uma lista de dados e processa-a num dicionário de status por TrackID.
+        Esta é a lógica do antigo 'monitor_all_clients'.
+        """
+        if not dados_completos:
+            return {}
         
         limite_tempo = timedelta(hours=24)
         agora = datetime.now()
-
-        all_data = self.controller.dados_completos
+        
+        client_status_output = {} # Dicionário de retorno
         records_by_trackid = {}
-        for record in all_data:
+        
+        for record in dados_completos:
             track_id = record.get("TrackID")
             if track_id:
                 if track_id not in records_by_trackid:
@@ -751,19 +894,71 @@ class AppGUI(QMainWindow):
                     'message': 'Formato de data inválido no último registo.'
                 }
 
-            self.client_status[track_id] = status_cliente
+            client_status_output[track_id] = status_cliente
+            
+        return client_status_output
 
-        current_ids = set(records_by_trackid.keys())
-        for old_id in list(self.client_status.keys()):
-            if old_id not in current_ids:
-                del self.client_status[old_id]
+    # --- [NOVO] MÉTODOS DE MONITORAMENTO GLOBAL ---
+    def run_global_client_monitoring(self):
+        """Dispara workers para buscar dados de TODOS os clientes em paralelo."""
+        logging.info("Iniciando monitoramento global de clientes...")
+        self.status_bar.showMessage("Monitor global: Buscando status de todos os clientes...")
+        
+        for client_info in self.clientes:
+            worker = Worker(self.fetch_client_data, client_info)
+            worker.finished.connect(self.on_global_data_received)
+            worker.error.connect(lambda err, c=client_info: self.on_global_data_error(c['nome'], err))
+            # Não usamos self.run_in_thread porque não queremos desabilitar a GUI inteira
+            self.workers.append(worker)
+            worker.start()
 
+    def fetch_client_data(self, client_info):
+        """
+        Função executada pelo Worker. Busca dados frescos de um cliente.
+        Retorna (nome_cliente, dados)
+        """
+        logging.info(f"[Monitor Global] Buscando dados de: {client_info['nome']}")
+        api = ConsultaAPI(client_info['url'], client_info['user'], client_info['password'])
+        # Força a atualização, ignorando o cache local da API
+        dados = api.buscar_todos(force_refresh=True) 
+        return (client_info['nome'], dados)
 
+    def on_global_data_received(self, result):
+        """Handler para quando um worker de monitoramento termina."""
+        client_name, dados = result
+        
+        if dados is None:
+            # Ocorreu um erro dentro do fetch_client_data (já logado)
+            status_dict = {"API_ERROR": {"status": "ERRO", "message": "Falha ao conectar ou buscar dados."}}
+        else:
+            logging.info(f"[Monitor Global] Dados recebidos de: {client_name} ({len(dados)} registos)")
+            # Armazena os dados brutos
+            self.global_client_data[client_name] = dados
+            # Processa os dados em status
+            status_dict = self.process_data_into_status(dados)
+        
+        # Armazena o status processado
+        self.global_client_status[client_name] = status_dict
+        
+        # Notifica a Tela de Controle para atualizar as suas abas
+        self.frames["Controle"].update_dashboard(self.global_client_status)
+        self.status_bar.showMessage(f"Monitor global: Status de '{client_name}' atualizado.", 5000)
+
+    def on_global_data_error(self, client_name, error):
+        """Handler para falha de um worker de monitoramento."""
+        logging.error(f"[Monitor Global] Erro ao buscar dados de {client_name}: {error}")
+        status_dict = {"API_ERROR": {"status": "ERRO", "message": f"Falha na thread: {error}"}}
+        self.global_client_status[client_name] = status_dict
+        self.frames["Controle"].update_dashboard(self.global_client_status)
+        self.status_bar.showMessage(f"Monitor global: Falha ao atualizar '{client_name}'.", 5000)
+
+    # --- Funções de Threads (sem alterações) ---
     def on_worker_finished(self, worker):
         if worker in self.workers:
             self.workers.remove(worker)
 
     def run_in_thread(self, func, on_finish, on_error, *args, **kwargs):
+        """Usado para tarefas da GUI (Carregar, Consultar, Exportar) que bloqueiam a UI."""
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)
         worker = Worker(func, *args, **kwargs)
@@ -778,30 +973,46 @@ class AppGUI(QMainWindow):
     def on_task_error(self, error_msg):
         self.progress_bar.setVisible(False)
         self.status_bar.showMessage(f"ERRO: {error_msg}", 5000)
-        QMessageBox.critical(self, "Erro de API", error_msg)
+        QMessageBox.critical(self, "Erro de API", str(error_msg))
         self.gerir_estado_widgets(True)
 
     def on_task_completed(self):
         self.progress_bar.setVisible(False)
         self.gerir_estado_widgets(True)
 
-    def carregar_dados_iniciais(self):
+    # --- Métodos de Carregamento da TELA DE CONSULTAS ---
+    def carregar_dados_iniciais(self, force_refresh=False):
+        if not self.api:
+             logging.warning("carregar_dados_iniciais chamado, mas a API (Consultas) não está inicializada.")
+             return
         self.is_first_load = True
-        self.status_bar.showMessage("A carregar dados iniciais...")
+        self.status_bar.showMessage(f"Carregando dados para {self.cliente_atual['nome']}...")
         self.run_in_thread(
             self.api.buscar_todos,
             on_finish=self.on_dados_carregados,
             on_error=self.on_task_error,
-            force_refresh=True
+            force_refresh=force_refresh
         )
 
     def on_dados_carregados(self, dados):
         if dados is None: dados = []
+        
+        # Atualiza o controlador de dados da TELA DE CONSULTAS
         self.controller.dados_completos = dados
         self.aplicar_filtro()
-        self.status_bar.showMessage(f"Dados carregados: {len(dados)} registos.", 5000)
+        self.status_bar.showMessage(f"Dados carregados para {self.cliente_atual['nome']}: {len(dados)} registos.", 5000)
+        
+        # Armazena os dados no cache global também (se ainda não estiver lá)
+        if self.cliente_atual['nome'] not in self.global_client_data:
+             self.global_client_data[self.cliente_atual['nome']] = dados
+             # Processa e atualiza o dashboard de controle
+             status_dict = self.process_data_into_status(dados)
+             self.global_client_status[self.cliente_atual['nome']] = status_dict
+             self.frames["Controle"].update_dashboard(self.global_client_status)
+             
         self.on_task_completed()
-        self.monitor_all_clients()
+        
+        # Lógica de redimensionamento da tabela
         tabela = self.frames["Consultas"].tabela
         header = tabela.horizontalHeader()
         widths = self.app_state.get("column_widths")
@@ -812,6 +1023,7 @@ class AppGUI(QMainWindow):
             tabela.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.is_first_load = False
 
+    # --- Métodos de Paginação, Filtro e Ordenação (sem alterações) ---
     def renderizar_dados(self):
         page_num, dados_pagina = self.controller.get_dados_pagina(self.pagina_atual)
         self.pagina_atual = page_num
@@ -854,6 +1066,7 @@ class AppGUI(QMainWindow):
                 header_item.setText(original_text)
         
     def consultar_api_async(self):
+        if not self.api: return
         id_msg = self.frames["Consultas"].entry_id.text().strip()
         if not (id_msg and id_msg.isdigit()):
             QMessageBox.warning(self, "Atenção", "IDMENSAGEM deve ser um número.")
@@ -867,7 +1080,8 @@ class AppGUI(QMainWindow):
         )
 
     def refresh_data_async(self):
-        self.carregar_dados_iniciais()
+        if not self.api: return
+        self.carregar_dados_iniciais(force_refresh=True)
 
     def ir_para_pagina(self, numero_pagina):
         self.pagina_atual = numero_pagina
@@ -878,6 +1092,7 @@ class AppGUI(QMainWindow):
     def pagina_anterior(self): self.ir_para_pagina(self.pagina_atual - 1)
     def proxima_pagina(self): self.ir_para_pagina(self.pagina_atual + 1)
     
+    # --- Métodos de Detalhes e Exportação (sem alterações) ---
     def show_record_details(self, item):
         row_index = item.row()
         id_col_index = -1
@@ -887,11 +1102,14 @@ class AppGUI(QMainWindow):
                 break
         
         if id_col_index != -1:
-            record_id = self.frames["Consultas"].tabela.item(row_index, id_col_index).text()
-            full_record = self.controller.get_record_by_id(record_id)
-            if full_record:
-                dialog = RecordDetailDialog(full_record, self)
-                dialog.exec()
+            try:
+                record_id = self.frames["Consultas"].tabela.item(row_index, id_col_index).text()
+                full_record = self.controller.get_record_by_id(record_id)
+                if full_record:
+                    dialog = RecordDetailDialog(full_record, self)
+                    dialog.exec()
+            except AttributeError:
+                logging.warning("Falha ao obter detalhes do registo. A tabela pode ter sido atualizada.")
             
     def exportar_excel(self):
         self._show_export_options("excel")
@@ -910,6 +1128,9 @@ class AppGUI(QMainWindow):
                     self.exportar.salvar_csv_async(option)
     
     def gerir_estado_widgets(self, habilitar):
+        # A combobox de clientes deve estar sempre habilitada, exceto durante o carregamento
+        self.combo_clientes.setEnabled(habilitar) 
+        
         screen = self.frames["Consultas"]
         widgets_to_manage = [
             screen.entry_id, screen.btn_consultar, screen.btn_refresh, 
